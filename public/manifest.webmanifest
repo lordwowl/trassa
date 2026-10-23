@@ -1,0 +1,9 @@
+{
+  "name": "Трасса",
+  "short_name": "Трасса",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#101820",
+  "theme_color": "#101820"
+}
