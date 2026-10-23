@@ -11,6 +11,7 @@ import { DriveScene } from './render/scenes/DriveScene';
 import { MenuScene } from './render/scenes/MenuScene';
 import { CityScene, MapScene } from './render/scenes/StubScene';
 import { loadTuningOverrides } from './render/ui/DebugPanel';
+import { watchViewport } from './render/viewport';
 
 const config = getLaunchConfig();
 // Переопределения из debug-панели действуют только в debug-режиме; канонические значения — tuning.json
@@ -31,7 +32,7 @@ setContext({
   debug: { scene: 'boot', speed: 0, rpm: 0, gear: 1, segment: 0, x: 0 },
 });
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   width: GAME_WIDTH,
@@ -47,3 +48,8 @@ new Phaser.Game({
   fps: { target: 60 },
   scene: [BootScene, MenuScene, DriveScene, MapScene, CityScene, DebugScene],
 });
+
+watchViewport(game);
+
+// Для отладки с компьютера (консоль, автотесты в браузере): только при ?debug=1
+if (config.debug) (globalThis as { __trassaGame?: Phaser.Game }).__trassaGame = game;
