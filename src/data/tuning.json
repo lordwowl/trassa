@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "params": {
+    "render.drawDistance": {
+      "value": 300,
+      "min": 50,
+      "max": 600,
+      "step": 10,
+      "label": "Дальность прорисовки, сегментов"
+    },
+    "render.resolutionScale": {
+      "value": 1,
+      "min": 0.5,
+      "max": 1,
+      "step": 0.05,
+      "label": "Масштаб рендера (с M1)"
+    },
+    "road.segmentLength": {
+      "value": 5,
+      "min": 2,
+      "max": 20,
+      "step": 0.5,
+      "label": "Длина сегмента, м"
+    },
+    "road.cameraHeight": {
+      "value": 1.2,
+      "min": 0.8,
+      "max": 3,
+      "step": 0.05,
+      "label": "Высота камеры (глаз водителя), м"
+    },
+    "road.fieldOfView": {
+      "value": 100,
+      "min": 60,
+      "max": 140,
+      "step": 1,
+      "label": "Угол обзора, °"
+    },
+    "car.maxSpeed": {
+      "value": 40,
+      "min": 10,
+      "max": 80,
+      "step": 1,
+      "label": "Макс. скорость, м/с"
+    },
+    "car.accel": {
+      "value": 4,
+      "min": 0.5,
+      "max": 15,
+      "step": 0.5,
+      "label": "Разгон, м/с²"
+    },
+    "car.braking": {
+      "value": 9,
+      "min": 2,
+      "max": 20,
+      "step": 0.5,
+      "label": "Торможение, м/с²"
+    },
+    "car.drag": {
+      "value": 0.02,
+      "min": 0,
+      "max": 0.1,
+      "step": 0.005,
+      "label": "Сопротивление"
+    },
+    "car.centrifugal": {
+      "value": 0.3,
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "label": "Центробежный снос"
+    },
+    "world.distanceScale": {
+      "value": 0.1,
+      "min": 0.02,
+      "max": 1,
+      "step": 0.01,
+      "label": "Сжатие расстояний"
+    }
+  }
+}
