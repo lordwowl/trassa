@@ -27,6 +27,9 @@
 - Android: Capacitor 8, `sensorLandscape`, тема `windowFullscreen` + иммерсивный режим в `MainActivity` (системные панели скрыты, появляются по свайпу). Debug APK собран локально в сессии (`./gradlew assembleDebug`, ~4.5 МБ).
 - Workflows `ci.yml`, `pages.yml`, `android.yml` — дословно из `docs/GITHUB_SETUP.md`, раздел 7.
 
+**fix(ci): Android debug APK**
+- `android-actions/setup-android@v3` по умолчанию ставит пакет `tools`, которого нет в современном sdkmanager, — workflow APK падал на первом же шаге. Указан `packages: platform-tools` (в `android.yml` и в `docs/GITHUB_SETUP.md`, раздел 7).
+
 ### Как проверить на телефоне
 Сначала (один раз) включить Pages: **Settings → Pages → Source: GitHub Actions**, и **Settings → Actions → General → Workflow permissions: Read and write** (см. `docs/GITHUB_SETUP.md`, раздел 3).
 
