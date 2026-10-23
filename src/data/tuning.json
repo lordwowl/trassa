@@ -15,12 +15,19 @@
       "step": 0.05,
       "label": "Масштаб рендера (с M1)"
     },
+    "render.horizon": {
+      "value": 0.5,
+      "min": 0.2,
+      "max": 0.7,
+      "step": 0.01,
+      "label": "Линия горизонта, доля высоты экрана"
+    },
     "road.segmentLength": {
       "value": 5,
       "min": 2,
       "max": 20,
       "step": 0.5,
-      "label": "Длина сегмента, м"
+      "label": "Длина сегмента, м (новая трасса)"
     },
     "road.cameraHeight": {
       "value": 1.2,
@@ -35,6 +42,41 @@
       "max": 140,
       "step": 1,
       "label": "Угол обзора, °"
+    },
+    "road.laneWidth": {
+      "value": 3.5,
+      "min": 2.5,
+      "max": 4.5,
+      "step": 0.1,
+      "label": "Ширина полосы, м"
+    },
+    "road.curveMax": {
+      "value": 0.008,
+      "min": 0.001,
+      "max": 0.02,
+      "step": 0.0005,
+      "label": "Макс. кривизна поворота, 1/м (новая трасса)"
+    },
+    "road.hillMax": {
+      "value": 20,
+      "min": 0,
+      "max": 60,
+      "step": 1,
+      "label": "Макс. перепад холма, м (новая трасса)"
+    },
+    "road.maxGrade": {
+      "value": 0.1,
+      "min": 0.02,
+      "max": 0.2,
+      "step": 0.01,
+      "label": "Макс. уклон (новая трасса)"
+    },
+    "road.trackLength": {
+      "value": 8000,
+      "min": 2000,
+      "max": 30000,
+      "step": 500,
+      "label": "Длина тестовой трассы, м (новая трасса)"
     },
     "car.maxSpeed": {
       "value": 40,
