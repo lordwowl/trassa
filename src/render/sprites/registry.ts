@@ -1,7 +1,7 @@
 // Реестр текстур: если указан файл — грузим его, иначе (или при ошибке загрузки) рисуем заглушку.
 // Замена заглушки на картинку = положить файл в public/assets и прописать file в нужной строке.
 import Phaser from 'phaser';
-import { carRear, hitchhiker, signSpeed, tree, type ProceduralDraw } from './procedural';
+import { carRear, hitchhiker, pole, signSpeed, tree, treeRound, type ProceduralDraw } from './procedural';
 
 export interface TextureEntry {
   /** Путь относительно корня сайта, например 'assets/cars/rear_red.png'. */
@@ -12,6 +12,8 @@ export interface TextureEntry {
 export const TEXTURES = {
   car_rear: { procedural: carRear },
   tree: { procedural: tree },
+  tree_round: { procedural: treeRound },
+  pole: { procedural: pole },
   sign_speed: { procedural: signSpeed },
   hitchhiker: { procedural: hitchhiker },
 } satisfies Record<string, TextureEntry>;

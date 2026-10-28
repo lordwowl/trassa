@@ -5,20 +5,24 @@ import { getContext, type GameContext } from '../../context';
 import { createCarParams, createCarState, readCarParams, readRoadContext, stepCar, type CarInput, type CarParams, type CarState, type RoadContext } from '../../core/car';
 import { advance, createFixedStep, type FixedStep } from '../../core/loop';
 import { createRng, hashSeed } from '../../core/rng';
-import { focalFromFov, generateRoad, segmentIndexAt, type ProjectionView, type Road } from '../../core/road';
+import { decorateRoad, focalFromFov, generateRoad, segmentIndexAt, type ProjectionView, type Road } from '../../core/road';
 import { getTuning, type Tuning } from '../../core/tuning';
 import { DriveControls } from '../../input/DriveControls';
 import { Cockpit } from '../cockpit/Cockpit';
 import { DAY_PALETTE, NIGHT_PALETTE, RoadRenderer, type RoadPalette, type RoadView } from '../road/RoadRenderer';
+import { RoadsideSprites, type KindHeights } from '../road/RoadsideSprites';
 import { createButton } from '../ui/Button';
 import { t } from '../ui/strings';
 
 /** Кнопки поверх кабины и педалей. */
 const HUD_DEPTH = 60;
 
-/** Трасса по seed и параметрам генерации из tuning.json. */
+/** Размер пула придорожных спрайтов. */
+const SPRITE_POOL = 320;
+
+/** Трасса и придорожные объекты по seed и параметрам из tuning.json (отдельные потоки RNG). */
 export function buildRoad(seed: number, tn: Tuning): Road {
-  return generateRoad(createRng(hashSeed(`road:${seed}`)), {
+  const road = generateRoad(createRng(hashSeed(`road:${seed}`)), {
     segmentLength: getTuning(tn, 'road.segmentLength'),
     length: getTuning(tn, 'road.trackLength'),
     curveMax: getTuning(tn, 'road.curveMax'),
@@ -26,6 +30,16 @@ export function buildRoad(seed: number, tn: Tuning): Road {
     maxGrade: getTuning(tn, 'road.maxGrade'),
     lanes: 2,
   });
+  decorateRoad(road, createRng(hashSeed(`roadside:${seed}`)), {
+    laneWidth: getTuning(tn, 'road.laneWidth'),
+    treeDensity: getTuning(tn, 'roadside.treeDensity'),
+    treeMinOffset: getTuning(tn, 'roadside.treeMinOffset'),
+    treeMaxOffset: getTuning(tn, 'roadside.treeMaxOffset'),
+    poleSpacing: getTuning(tn, 'roadside.poleSpacing'),
+    poleOffset: getTuning(tn, 'roadside.poleOffset'),
+    signSpacing: getTuning(tn, 'roadside.signSpacing'),
+  });
+  return road;
 }
 
 function paletteFor(ctx: GameContext): RoadPalette {
@@ -38,6 +52,8 @@ export class DriveScene extends Phaser.Scene {
   private loop!: FixedStep;
   private road!: Road;
   private roadRenderer!: RoadRenderer;
+  private roadside!: RoadsideSprites;
+  private readonly heights: KindHeights = { tree: 9, tree_round: 7, pole: 8, sign: 2.6 };
   private palette!: RoadPalette;
   private cockpit!: Cockpit;
   private controls!: DriveControls;
@@ -80,6 +96,7 @@ export class DriveScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(this.palette.sky);
     const maxDraw = this.ctx.tuning.data.params['render.drawDistance']?.max ?? 600;
     this.roadRenderer = new RoadRenderer(this, maxDraw);
+    this.roadside = new RoadsideSprites(this, SPRITE_POOL);
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
     this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'));
@@ -89,7 +106,10 @@ export class DriveScene extends Phaser.Scene {
     this.calibrateButton = createButton(this, 628, 52, t('calibrate'), () => this.controls.calibrate(), { width: 220, height: 72, fontSize: 26, color: 0x44515e }).setDepth(HUD_DEPTH);
     this.shownTilt = null;
     this.shownMode = null;
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.roadRenderer.destroy());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.roadRenderer.destroy();
+      this.roadside.destroy();
+    });
   }
 
   private tick = (dt: number): void => {
@@ -123,6 +143,12 @@ export class DriveScene extends Phaser.Scene {
       shake = amp * (Math.sin(time * 0.071) * 0.6 + Math.sin(time * 0.153) * 0.4);
     }
     this.roadRenderer.graphics.y = shake;
+    const hgt = this.heights;
+    hgt.tree = getTuning(tn, 'roadside.treeHeight');
+    hgt.tree_round = getTuning(tn, 'roadside.treeRoundHeight');
+    hgt.pole = getTuning(tn, 'roadside.poleHeight');
+    hgt.sign = getTuning(tn, 'roadside.signHeight');
+    this.roadside.render(this.road, this.roadRenderer.sprites, hgt, this.palette.spriteTint, GAME_WIDTH, shake);
 
     this.cockpit.update(car.speed * 3.6, car.steer * getTuning(tn, 'cockpit.wheelMaxAngle'));
     const d = this.ctx.debug;

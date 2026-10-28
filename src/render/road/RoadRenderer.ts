@@ -14,6 +14,8 @@ export interface RoadPalette {
   rumbleLight: number;
   rumbleDark: number;
   lane: number;
+  /** Тонировка придорожных спрайтов (ночью темнее). */
+  spriteTint: number;
 }
 
 export const DAY_PALETTE: RoadPalette = {
@@ -25,6 +27,7 @@ export const DAY_PALETTE: RoadPalette = {
   rumbleLight: 0xf2f2f2,
   rumbleDark: 0xc0392b,
   lane: 0xf2f2f2,
+  spriteTint: 0xffffff,
 };
 
 export const NIGHT_PALETTE: RoadPalette = {
@@ -36,6 +39,7 @@ export const NIGHT_PALETTE: RoadPalette = {
   rumbleLight: 0x8a8a8a,
   rumbleDark: 0x5a1f1a,
   lane: 0x9a9a9a,
+  spriteTint: 0x3c4660,
 };
 
 export interface RoadView {
@@ -63,6 +67,22 @@ const STRIPE_LENGTH = 3;
 const NEAR_Z = 0.3;
 /** Сегменты тоньше этого (px) у горизонта не рисуются по отдельности. */
 const MIN_SEGMENT_PX = 1;
+/** Объекты ближе этого (м) не рисуются — уже «проехали». */
+const SPRITE_NEAR_Z = 1;
+
+/**
+ * Сегменты с придорожными объектами, собранные за кадр (от ближних к дальним).
+ * x, y, scale — проекция начала сегмента (центр дороги); clip — экранная Y,
+ * ниже которой объект закрыт более близкой дорогой (холмом).
+ */
+export interface SpriteSegments {
+  count: number;
+  segment: Int32Array;
+  x: Float32Array;
+  y: Float32Array;
+  scale: Float32Array;
+  clip: Float32Array;
+}
 
 export class RoadRenderer {
   private readonly g: Phaser.GameObjects.Graphics;
@@ -79,6 +99,7 @@ export class RoadRenderer {
   private readonly seg: Int32Array;
   private readonly lanes: Int32Array;
   private readonly p: Projected = { x: 0, y: 0, scale: 0 };
+  readonly sprites: SpriteSegments;
 
   constructor(scene: Phaser.Scene, maxDrawDistance: number) {
     this.g = scene.add.graphics();
@@ -92,6 +113,14 @@ export class RoadRenderer {
     this.gb = new Float32Array(maxDrawDistance);
     this.seg = new Int32Array(maxDrawDistance);
     this.lanes = new Int32Array(maxDrawDistance);
+    this.sprites = {
+      count: 0,
+      segment: new Int32Array(maxDrawDistance),
+      x: new Float32Array(maxDrawDistance),
+      y: new Float32Array(maxDrawDistance),
+      scale: new Float32Array(maxDrawDistance),
+      clip: new Float32Array(maxDrawDistance),
+    };
   }
 
   get graphics(): Phaser.GameObjects.Graphics {
@@ -123,6 +152,8 @@ export class RoadRenderer {
     let dx = -baseSeg.curve * L2 * (offset / L);
     let top = v.height; // самая верхняя уже закрытая точка экрана
     let count = 0;
+    const sp = this.sprites;
+    sp.count = 0;
 
     for (let i = 0; i < draw; i++) {
       const idx = (base + i) % n;
@@ -136,6 +167,16 @@ export class RoadRenderer {
       const yb = sNext.y;
       x += dx;
       dx += s.curve * L2;
+      // Объекты стоят у начала сегмента; закрыты всем, что ближе (top до этого сегмента)
+      if (s.objects && za > SPRITE_NEAR_Z) {
+        project(this.p, v.view, xa - v.x, ya - camY, za);
+        const k = sp.count++;
+        sp.segment[k] = idx;
+        sp.x[k] = this.p.x;
+        sp.y[k] = this.p.y;
+        sp.scale[k] = this.p.scale;
+        sp.clip[k] = top;
+      }
       if (zb <= NEAR_Z) continue;
       if (za < NEAR_Z) {
         // Подрезаем сегмент по ближней плоскости
