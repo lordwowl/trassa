@@ -54,6 +54,8 @@ const NEAR_Z = 0.3;
 const MIN_SEGMENT_PX = 1;
 /** Объекты ближе этого (м) не рисуются — уже «проехали». */
 const SPRITE_NEAR_Z = 1;
+/** Смещение, заведомо вне луча фар (освещение только общее). */
+const OUTSIDE_BEAM = 1e6;
 
 /**
  * Сегменты с придорожными объектами, собранные за кадр (от ближних к дальним).
@@ -214,16 +216,33 @@ export class RoadRenderer {
       const light = Math.floor((this.seg[k] as number) / STRIPE_LENGTH) % 2 === 0;
       // Без округления: иначе полоса травы на пиксель залезает на дальний асфальт
       const gb = this.gb[k] as number;
-      g.fillStyle(shade(light ? pal.grassLight : pal.grassDark, lit, z));
+      const grass = light ? pal.grassLight : pal.grassDark;
+      g.fillStyle(shade(grass, lit, z, OUTSIDE_BEAM));
       g.fillRect(0, y2, v.width, gb - y2);
+
+      // Пятно фар на траве: узкий луч по оси машины (центр экрана), мягкий край в два шага
+      const halfRoad = (lanes * v.laneWidth) / 2;
+      const s1 = w1 / halfRoad;
+      const s2 = w2 / halfRoad;
+      if (lit.beamRange > 0 && z < lit.beamRange) {
+        const cx = v.view.centerX;
+        const outer = lit.beamWidth + lit.beamFade;
+        const inner = lit.beamWidth + lit.beamFade * 0.35;
+        g.fillStyle(shade(grass, lit, z, lit.beamWidth + lit.beamFade * 0.65));
+        quad(g, cx, gb, outer * s1, cx, y2, outer * s2);
+        g.fillStyle(shade(grass, lit, z, lit.beamWidth));
+        quad(g, cx, gb, inner * s1, cx, y2, inner * s2);
+      }
+      // Смещение оси дороги от оси машины, м — чтобы в повороте дорога уходила из луча
+      const lateral = (x1 - v.view.centerX) / s1;
 
       // Обочина-«зебра»: шире полотна на RUMBLE_WIDTH с каждой стороны
       const r1 = w1 * (1 + rumbleK / lanes);
       const r2 = w2 * (1 + rumbleK / lanes);
-      g.fillStyle(shade(light ? pal.rumbleLight : pal.rumbleDark, lit, z));
+      g.fillStyle(shade(light ? pal.rumbleLight : pal.rumbleDark, lit, z, lateral));
       quad(g, x1, y1, r1, x2, y2, r2);
 
-      g.fillStyle(shade(light ? pal.roadLight : pal.roadDark, lit, z));
+      g.fillStyle(shade(light ? pal.roadLight : pal.roadDark, lit, z, lateral));
       quad(g, x1, y1, w1, x2, y2, w2);
 
       // Разметка между полосами — пунктир
@@ -231,7 +250,7 @@ export class RoadRenderer {
         // w — полуширина полотна в px; полуширина линии = w · (LANE_LINE_WIDTH / 2) / halfW
         const lw1 = (w1 * LANE_LINE_WIDTH) / (lanes * v.laneWidth);
         const lw2 = (w2 * LANE_LINE_WIDTH) / (lanes * v.laneWidth);
-        g.fillStyle(shade(pal.lane, lit, z));
+        g.fillStyle(shade(pal.lane, lit, z, lateral));
         for (let lane = 1; lane < lanes; lane++) {
           const f = (2 * lane) / lanes - 1;
           quad(g, x1 + w1 * f, y1, lw1, x2 + w2 * f, y2, lw2);

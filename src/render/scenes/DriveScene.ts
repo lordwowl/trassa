@@ -51,7 +51,7 @@ export class DriveScene extends Phaser.Scene {
   private readonly heights: KindHeights = { tree: 9, tree_round: 7, pole: 8, sign: 2.6 };
   private sky!: Sky;
   private readonly lighting = createLighting();
-  private readonly lightParams: LightingParams = { nightAmbient: 0.1, lowRange: 45, highRange: 110, beamIntensity: 0.85 };
+  private readonly lightParams: LightingParams = { nightAmbient: 0.1, lowRange: 45, highRange: 110, beamIntensity: 0.85, beamWidth: 4, beamFade: 3 };
   /** Минута, показанная на часах (строка часов создаётся только при её смене). */
   private shownMinute = -1;
   private timeSpeed = 30;
@@ -135,6 +135,8 @@ export class DriveScene extends Phaser.Scene {
     lp.lowRange = getTuning(tn, 'light.lowRange');
     lp.highRange = getTuning(tn, 'light.highRange');
     lp.beamIntensity = getTuning(tn, 'light.beamIntensity');
+    lp.beamWidth = getTuning(tn, 'light.beamWidth');
+    lp.beamFade = getTuning(tn, 'light.beamFade');
     const hour = this.ctx.state.timeOfDay;
     updateLighting(this.lighting, hour, this.controls.headlights, lp);
     this.sky.update(hour, this.projection.horizonY, GAME_WIDTH);
@@ -151,7 +153,7 @@ export class DriveScene extends Phaser.Scene {
     hgt.tree_round = getTuning(tn, 'roadside.treeRoundHeight');
     hgt.pole = getTuning(tn, 'roadside.poleHeight');
     hgt.sign = getTuning(tn, 'roadside.signHeight');
-    this.roadside.render(this.road, this.roadRenderer.sprites, hgt, this.lighting, GAME_WIDTH, shake);
+    this.roadside.render(this.road, this.roadRenderer.sprites, hgt, this.lighting, GAME_WIDTH, this.projection.centerX, shake);
 
     const minute = Math.floor(this.ctx.state.timeOfDay * 60);
     if (minute !== this.shownMinute) {
