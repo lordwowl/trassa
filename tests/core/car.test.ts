@@ -7,7 +7,7 @@ import { createTuning, parseTuningData } from '../../src/core/tuning';
 
 const params = createCarParams(createTuning(parseTuningData(rawTuning)));
 const DT = 1 / 60;
-const flat: RoadContext = { curve: 0, grade: 0, halfWidth: 3.5 };
+const flat: RoadContext = { curve: 0, grade: 0, halfWidth: 3.5, grip: 1 };
 const GAS: CarInput = { throttle: 1, brake: 0, steer: 0, manual: false, shift: 0 };
 const COAST: CarInput = { throttle: 0, brake: 0, steer: 0, manual: false, shift: 0 };
 
@@ -85,6 +85,22 @@ describe('боковая динамика', () => {
   });
 });
 
+describe('сцепление', () => {
+  it('на мокрой дороге тормозной путь длиннее, а снос в повороте сильнее', () => {
+    const wet: RoadContext = { ...flat, grip: 0.75 };
+    const dryCar = run(8, GAS);
+    const wetCar = { ...dryCar };
+    const z0 = dryCar.z;
+    run(4, { throttle: 0, brake: 1, steer: 0, manual: false, shift: 0 }, flat, dryCar);
+    run(4, { throttle: 0, brake: 1, steer: 0, manual: false, shift: 0 }, wet, wetCar);
+    expect(wetCar.z - z0).toBeGreaterThan(dryCar.z - z0);
+    const base = run(6, GAS);
+    const dryDrift = run(1, GAS, { ...flat, curve: 0.008 }, { ...base });
+    const wetDrift = run(1, GAS, { ...wet, curve: 0.008 }, { ...base });
+    expect(wetDrift.x).toBeLessThan(dryDrift.x);
+  });
+});
+
 describe('обочина', () => {
   it('за краем полотна — флаг обочины и торможение до предела', () => {
     const car = run(10, GAS);
@@ -111,7 +127,7 @@ describe('readRoadContext', () => {
     const d = createDraft();
     addSection(d, { enter: 0, hold: 10, leave: 0, curve: 0.005, dy: 5, lanes: 2 });
     const road = { segments: d.segments, segmentLength: 5, length: 50 };
-    const ctx = readRoadContext({ curve: 0, grade: 0, halfWidth: 0 }, road, 22, 3.5);
+    const ctx = readRoadContext({ curve: 0, grade: 0, halfWidth: 0, grip: 1 }, road, 22, 3.5);
     expect(ctx.curve).toBe(0.005);
     expect(ctx.grade).toBeCloseTo((d.segments[5]!.y - d.segments[4]!.y) / 5);
     expect(ctx.halfWidth).toBe(3.5);
@@ -119,7 +135,7 @@ describe('readRoadContext', () => {
 
   it('работает на стыке конца и начала трассы', () => {
     const road = generateRoad(createRng(1), { segmentLength: 5, length: 3000, curveMax: 0.008, hillMax: 20, maxGrade: 0.1, lanes: 2 });
-    const ctx = readRoadContext({ curve: 0, grade: 0, halfWidth: 0 }, road, road.length - 1, 3.5);
+    const ctx = readRoadContext({ curve: 0, grade: 0, halfWidth: 0, grip: 1 }, road, road.length - 1, 3.5);
     expect(Number.isFinite(ctx.grade)).toBe(true);
     expect(Math.abs(ctx.grade)).toBeLessThanOrEqual(0.1 + 1e-9);
   });

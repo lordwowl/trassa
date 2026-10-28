@@ -1,7 +1,7 @@
 // Небо: вертикальный градиент от зенита к горизонту. Перерисовывается только когда меняется цвет
 // (время суток идёт медленно) или линия горизонта.
 import Phaser from 'phaser';
-import { skyColors, type SkyColors } from './lighting';
+import { skyColors, type Lighting, type SkyColors } from './lighting';
 
 export class Sky {
   private readonly g: Phaser.GameObjects.Graphics;
@@ -14,8 +14,8 @@ export class Sky {
     this.g = scene.add.graphics().setDepth(-1);
   }
 
-  update(hour: number, horizonY: number, width: number): void {
-    const c = skyColors(this.colors, hour);
+  update(hour: number, horizonY: number, width: number, light: Lighting, overcast: number): void {
+    const c = skyColors(this.colors, hour, light, overcast);
     if (c.top === this.drawnTop && c.bottom === this.drawnBottom && horizonY === this.drawnHorizon) return;
     this.drawnTop = c.top;
     this.drawnBottom = c.bottom;

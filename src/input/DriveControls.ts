@@ -23,6 +23,8 @@ export class DriveControls {
   private pendingShift = 0;
   /** Фары — состояние машины в рейсе, не настройка: в начале выключены. */
   headlights: HeadlightMode = 0;
+  /** Дворники: 0 — выкл, 1 — медленно, 2 — быстро. */
+  wipers: 0 | 1 | 2 = 0;
 
   constructor(scene: Phaser.Scene, labels: { gas: string; brake: string }) {
     this.settings = loadControlSettings();
@@ -50,6 +52,10 @@ export class DriveControls {
     this.settings.transmission = this.settings.transmission === 'auto' ? 'manual' : 'auto';
     this.pendingShift = 0;
     saveControlSettings(this.settings);
+  }
+
+  cycleWipers(): void {
+    this.wipers = this.wipers === 0 ? 1 : this.wipers === 1 ? 2 : 0;
   }
 
   cycleHeadlights(): void {
@@ -87,6 +93,7 @@ export class DriveControls {
     out.throttle = Math.max(t.throttle, kb.throttle);
     out.manual = this.settings.transmission === 'manual';
     if (kb.lightsPressed()) this.cycleHeadlights();
+    if (kb.wipersPressed()) this.cycleWipers();
     const keyShift = kb.shiftRequest();
     if (keyShift !== 0) this.requestShift(keyShift);
     // Физика сбрасывает out.shift после обработки; новый запрос кладём, только когда прежний принят

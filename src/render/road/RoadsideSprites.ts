@@ -2,7 +2,8 @@
 // Порядок — от дальних к ближним (depth растёт), объекты за гребнем холма обрезаются снизу.
 import Phaser from 'phaser';
 import type { Road, RoadObjectKind, RoadSegment } from '../../core/road';
-import { shade, type Lighting } from './lighting';
+import { fogAmount } from '../../core/world';
+import { shadeNoFog, type Lighting } from './lighting';
 import type { SpriteSegments } from './RoadRenderer';
 
 /** Вид объекта → ключ текстуры из render/sprites/registry.ts. */
@@ -68,7 +69,9 @@ export class RoadsideSprites {
         if (baseY > clip) img.setCrop(0, 0, fw, (fh * (clip - top)) / h);
         else if (img.isCropped) img.setCrop();
         // Освещение по расстоянию и смещению от оси машины: ночью вне луча — силуэты
-        img.setTint(shade(0xffffff, lit, z, (sx - centerX) / scale));
+        img.setTint(shadeNoFog(0xffffff, lit, z, (sx - centerX) / scale));
+        // Дымка: дальние объекты растворяются
+        img.setAlpha(1 - fogAmount(z, lit.visibility));
         img.setDepth(DEPTH_BASE + used * DEPTH_STEP);
         img.setVisible(true);
         used++;
