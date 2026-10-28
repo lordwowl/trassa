@@ -22,7 +22,7 @@ export class DebugScene extends Phaser.Scene {
   create(): void {
     this.ctx = getContext();
     this.text = this.add
-      .text(8, 8, '', { fontFamily: 'monospace', fontSize: '20px', color: '#00ff88', backgroundColor: 'rgba(0,0,0,0.55)', padding: { x: 6, y: 4 } })
+      .text(8, 100, '', { fontFamily: 'monospace', fontSize: '20px', color: '#00ff88', backgroundColor: 'rgba(0,0,0,0.55)', padding: { x: 6, y: 4 } })
       .setDepth(1000);
     this.scene.bringToTop();
   }

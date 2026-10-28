@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getContext } from '../../context';
+import { TiltInput } from '../../input/TiltInput';
 import { enterFullscreenLandscape } from '../fullscreen';
 import { createButton } from '../ui/Button';
 import { t } from '../ui/strings';
@@ -17,6 +18,7 @@ export class MenuScene extends Phaser.Scene {
 
     createButton(this, 640, 400, t('play'), () => {
       enterFullscreenLandscape(this);
+      TiltInput.requestPermission();
       this.scene.start('drive');
     }, { width: 420, height: 120, color: 0x27ae60, fontSize: 56 });
     createButton(this, 500, 560, t('map'), () => this.scene.start('map'), { width: 240 });

@@ -14,5 +14,12 @@
   "debugCopied": "Скопировано",
   "debugCopyFailed": "Не удалось — выделите текст вручную",
   "debugReset": "Сбросить",
-  "debugClose": "Закрыть"
+  "debugClose": "Закрыть",
+  "menu": "Меню",
+  "gas": "ГАЗ",
+  "brake": "ТОРМОЗ",
+  "steerTilt": "Руль: наклон",
+  "steerButtons": "Руль: кнопки",
+  "calibrate": "Калибровать",
+  "steerTiltNoSensor": "Наклон: нет датчика"
 }
