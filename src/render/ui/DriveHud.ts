@@ -1,7 +1,9 @@
-// Кнопки экрана езды: верхний ряд (меню, руль, калибровка, КПП) и ▲▼ передач на консоли.
+// Кнопки экрана езды: верхний ряд (меню, руль, калибровка, КПП, фары), дворники и поворотники на панели,
+// гудок на руле, ▲▼ передач на консоли.
 // Подписи и видимость обновляются только при изменении режимов.
 import Phaser from 'phaser';
 import type { DriveControls } from '../../input/DriveControls';
+import { DRIVER_X } from '../cockpit/Cockpit';
 import { createButton } from './Button';
 import { t } from './strings';
 
@@ -35,6 +37,13 @@ export class DriveHud {
     this.lights = createButton(scene, 1090, 52, '', () => controls.cycleHeadlights(), { ...top, width: 160, fontSize: 22 }).setDepth(HUD_DEPTH);
     // Дворники — на панели слева от приборов (GDD 5.1: «на панели — дворники»)
     this.wipers = createButton(scene, 196, 444, '', () => controls.cycleWipers(), { width: 170, height: 52, fontSize: 20, color: 0x2f3742 }).setDepth(HUD_DEPTH);
+    // Рычаг поворотников — кнопки по сторонам от дворников; гудок — на руле (держать)
+    const lever = { width: 84, height: 52, fontSize: 30, color: 0x2f3742 };
+    createButton(scene, 54, 444, '◁', () => controls.requestSignal(-1), lever).setDepth(HUD_DEPTH);
+    createButton(scene, 338, 444, '▷', () => controls.requestSignal(1), lever).setDepth(HUD_DEPTH);
+    createButton(scene, DRIVER_X, 668, t('horn'), () => undefined, {
+      width: 150, height: 64, fontSize: 24, color: 0x2a2e35, onHold: (down) => controls.setHornButton(down),
+    }).setDepth(HUD_DEPTH);
     // ▲▼ «у рычага» — на центральной консоли (GDD 5.1), под часами
     const shift = { width: 140, height: 80, fontSize: 40, color: 0x3a4250 };
     this.shiftUp = createButton(scene, 805, 592, '▲', () => controls.requestShift(1), shift).setDepth(HUD_DEPTH);

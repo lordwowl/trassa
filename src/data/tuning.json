@@ -518,6 +518,69 @@
       "max": 150,
       "step": 5,
       "label": "Дальность в зеркалах, сегментов"
+    },
+    "car.tankSize": {
+      "value": 50,
+      "min": 20,
+      "max": 120,
+      "step": 1,
+      "label": "Объём бака, л"
+    },
+    "car.fuelLampAt": {
+      "value": 0.1,
+      "min": 0,
+      "max": 0.5,
+      "step": 0.01,
+      "label": "Лампа топлива при остатке (доля бака)"
+    },
+    "cockpit.blinkPeriod": {
+      "value": 0.8,
+      "min": 0.4,
+      "max": 1.6,
+      "step": 0.05,
+      "label": "Период мигания поворотника, с"
+    },
+    "cockpit.signalArmSteer": {
+      "value": 0.6,
+      "min": 0.2,
+      "max": 1,
+      "step": 0.05,
+      "label": "Руль, после которого поворотник выключится сам"
+    },
+    "cockpit.signalLaneChange": {
+      "value": 2.8,
+      "min": 1,
+      "max": 5,
+      "step": 0.1,
+      "label": "Перестроение для выключения поворотника, м"
+    },
+    "nav.lookahead": {
+      "value": 800,
+      "min": 200,
+      "max": 2000,
+      "step": 50,
+      "label": "Навигатор: поворот виден за, м"
+    },
+    "nav.curveMin": {
+      "value": 0.0015,
+      "min": 0.0005,
+      "max": 0.006,
+      "step": 0.0005,
+      "label": "Навигатор: поворот от кривизны, 1/м"
+    },
+    "nav.sharpCurve": {
+      "value": 0.005,
+      "min": 0.002,
+      "max": 0.01,
+      "step": 0.0005,
+      "label": "Навигатор: крутой поворот от, 1/м"
+    },
+    "audio.volume": {
+      "value": 0.5,
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "label": "Громкость звуков"
     }
   }
 }

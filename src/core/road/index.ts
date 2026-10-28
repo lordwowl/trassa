@@ -5,3 +5,4 @@ export * from './query';
 export * from './projection';
 export * from './roadside';
 export * from './rearview';
+export * from './lookahead';

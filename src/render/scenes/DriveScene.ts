@@ -2,13 +2,18 @@
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../config';
 import { getContext, type GameContext } from '../../context';
-import { createCarParams, createCarState, readCarParams, readRoadContext, stepCar, type CarInput, type CarParams, type CarState, type RoadContext } from '../../core/car';
+import {
+  createCarParams, createCarState, createSignals, readCarParams, readRoadContext, signalLit, stepCar, stepSignals, toggleSignal,
+  type CarInput, type CarParams, type CarState, type RoadContext, type SignalParams,
+} from '../../core/car';
 import { advance, createFixedStep, type FixedStep } from '../../core/loop';
 import { createRng, hashSeed } from '../../core/rng';
-import { decorateRoad, focalFromFov, generateRoad, segmentIndexAt, type ProjectionView, type Road } from '../../core/road';
+import { createCurveAhead, decorateRoad, findCurveAhead, focalFromFov, generateRoad, segmentIndexAt, type ProjectionView, type Road } from '../../core/road';
 import { getTuning, type Tuning } from '../../core/tuning';
+import { Sfx } from '../../audio/Sfx';
 import { DriveControls } from '../../input/DriveControls';
 import { Cockpit } from '../cockpit/Cockpit';
+import type { LampState } from '../cockpit/Lamps';
 import { Mirrors } from '../cockpit/Mirrors';
 import { advanceClock, formatClock } from '../../core/world';
 import { createLighting, updateLighting, type LightingParams } from '../road/lighting';
@@ -66,6 +71,12 @@ export class DriveScene extends Phaser.Scene {
   private carParams!: CarParams;
   private readonly carInput: CarInput = { throttle: 0, brake: 0, steer: 0, manual: false, shift: 0 };
   private readonly roadCtx: RoadContext = { curve: 0, grade: 0, halfWidth: 0, grip: 1 };
+  private readonly signals = createSignals();
+  private readonly signalParams: SignalParams = { blinkPeriod: 0.8, armSteer: 0.6, laneChange: 2.8 };
+  private shownBlink = false;
+  private readonly lampState: LampState = { left: false, right: false, low: false, high: false, fuel: false, damage: false };
+  private readonly curveAhead = createCurveAhead();
+  private sfx!: Sfx;
   private laneWidth = 3.5;
   private readonly projection: ProjectionView = { focal: 1, centerX: GAME_WIDTH / 2, horizonY: GAME_HEIGHT / 2 };
   private readonly view: RoadView = {
@@ -101,12 +112,23 @@ export class DriveScene extends Phaser.Scene {
     this.roadside = new RoadsideSprites(this, SPRITE_POOL);
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
-    this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'), getTuning(this.ctx.tuning, 'car.redline'));
+    this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'), getTuning(this.ctx.tuning, 'car.redline'),
+      getTuning(this.ctx.tuning, 'car.fuelLampAt'));
+    const sg = this.signals;
+    sg.dir = 0;
+    this.shownBlink = false;
+    // Звук разрешается только после жеста — разблокируем при любом касании или клавише
+    const sfx = new Sfx();
+    this.sfx = sfx;
+    this.input.on('pointerdown', () => sfx.unlock());
+    this.input.on('pointerup', () => sfx.unlock());
+    this.input.keyboard?.on('keydown', () => sfx.unlock());
     this.mirrors = new Mirrors(this);
     this.hud = new DriveHud(this, this.controls, () => this.scene.start('menu'));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.roadRenderer.destroy();
       this.roadside.destroy();
+      this.sfx.destroy();
     });
   }
 
@@ -114,6 +136,7 @@ export class DriveScene extends Phaser.Scene {
     readRoadContext(this.roadCtx, this.road, this.car.z, this.laneWidth);
     this.roadCtx.grip = this.weather.effects.grip;
     stepCar(this.car, this.carInput, this.carParams, this.roadCtx, dt);
+    stepSignals(this.signals, this.signalParams, dt, this.car.steer, this.car.x);
     this.weather.step(dt, this.car.speed, this.controls.wipers);
     const st = this.ctx.state;
     st.timeOfDay = advanceClock(st.timeOfDay, dt, this.timeSpeed);
@@ -127,8 +150,15 @@ export class DriveScene extends Phaser.Scene {
     this.timeSpeed = getTuning(tn, 'world.timeSpeed');
     this.controls.read(this.carInput, tn, deltaMs / 1000);
     this.hud.update();
+    const sp = this.signalParams;
+    sp.blinkPeriod = getTuning(tn, 'cockpit.blinkPeriod');
+    sp.armSteer = getTuning(tn, 'cockpit.signalArmSteer');
+    sp.laneChange = getTuning(tn, 'cockpit.signalLaneChange');
+    const lever = this.controls.takeSignal();
+    if (lever !== 0) toggleSignal(this.signals, lever, this.car.x);
     advance(this.loop, deltaMs / 1000, this.tick);
     const car = this.car;
+    this.updateSignalsAndSound(tn);
 
     this.projection.focal = focalFromFov(getTuning(tn, 'road.fieldOfView'), GAME_WIDTH);
     this.projection.horizonY = GAME_HEIGHT * getTuning(tn, 'render.horizon');
@@ -173,11 +203,37 @@ export class DriveScene extends Phaser.Scene {
       this.cockpit.setClock(formatClock(this.ctx.state.timeOfDay));
     }
     this.cockpit.update(car.speed * 3.6, car.steer * getTuning(tn, 'cockpit.wheelMaxAngle'), car.rpm, car.gear, this.carInput.manual);
+    const st = this.ctx.state;
+    const tank = getTuning(tn, 'car.tankSize');
+    const ls = this.lampState;
+    ls.low = this.controls.headlights === 1;
+    ls.high = this.controls.headlights === 2;
+    ls.fuel = st.fuel <= tank * getTuning(tn, 'car.fuelLampAt');
+    ls.damage = false; // повреждения — M3
+    this.cockpit.lamps.update(ls);
+    this.cockpit.lamps.setFuel(st.fuel / tank);
+    findCurveAhead(this.curveAhead, this.road, car.z, getTuning(tn, 'nav.lookahead'), getTuning(tn, 'nav.curveMin'));
+    this.cockpit.navigator.update(this.curveAhead, getTuning(tn, 'nav.sharpCurve'), car.z);
     const d = this.ctx.debug;
     d.speed = car.speed;
     d.segment = segmentIndexAt(this.road, car.z);
     d.x = car.x;
     d.rpm = car.rpm;
     d.gear = car.gear;
+  }
+
+  /** Мигание ламп поворотников, щелчки реле, гудок. */
+  private updateSignalsAndSound(tn: Tuning): void {
+    const sfx = this.sfx;
+    sfx.setVolume(getTuning(tn, 'audio.volume'));
+    sfx.horn(this.controls.horn);
+    const lit = signalLit(this.signals, this.signalParams.blinkPeriod);
+    const ls = this.lampState;
+    ls.left = lit && this.signals.dir < 0;
+    ls.right = lit && this.signals.dir > 0;
+    if (lit !== this.shownBlink) {
+      this.shownBlink = lit;
+      sfx.tick(lit);
+    }
   }
 }

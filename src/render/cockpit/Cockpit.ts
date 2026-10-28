@@ -4,6 +4,8 @@
 // Всё процедурное и статичное; в кадре меняются только стрелка и угол руля.
 import Phaser from 'phaser';
 import { Gauge } from './Gauge';
+import { Lamps } from './Lamps';
+import { Navigator } from './Navigator';
 import { SteeringWheel } from './SteeringWheel';
 
 /** Низ лобового стекла (верх приборной панели), px. */
@@ -25,10 +27,12 @@ export class Cockpit {
   private readonly gearLabels: string[] = [];
   private readonly kmhLabels: string[] = [];
   readonly wheel: SteeringWheel;
+  readonly lamps: Lamps;
+  readonly navigator: Navigator;
   private readonly clock: Phaser.GameObjects.Text;
   private shownClock = '';
 
-  constructor(scene: Phaser.Scene, speedoMaxKmh: number, redline: number) {
+  constructor(scene: Phaser.Scene, speedoMaxKmh: number, redline: number, fuelLampAt: number) {
     const g = scene.add.graphics().setDepth(DEPTH);
     // Крыша и стойки
     g.fillStyle(0x1c1e22);
@@ -57,7 +61,7 @@ export class Cockpit {
     // Козырёк над приборами
     g.fillStyle(0x101114).fillEllipse(DRIVER_X, DASH_TOP + 4, 300, 44);
 
-    // Центральная консоль: часы, место под магнитолу/навигатор (M2.5)
+    // Центральная консоль: часы (магнитола); навигатор стоит на торпедо над ней
     const cy = DASH_TOP + 70;
     g.fillStyle(0x121317).fillRoundedRect(CONSOLE_X, cy, CONSOLE_W, H - cy + 20, 14);
     g.lineStyle(2, 0x2f333a).strokeRoundedRect(CONSOLE_X, cy, CONSOLE_W, H - cy + 20, 14);
@@ -80,6 +84,10 @@ export class Cockpit {
     }, DEPTH + 1);
     for (let g = 0; g <= 5; g++) this.gearLabels.push(`A${g}`, `M${g}`);
     for (let v = 0; v <= 400; v++) this.kmhLabels.push(String(v));
+    // Поворотники — между приборами над стрелками, остальные лампы — под тахометром, топливо — слева
+    this.lamps = new Lamps(scene, DEPTH + 1, { y: 452, left: 548, right: 590 },
+      { y: 590, x: 596, step: 36 }, { x: DRIVER_X - 132, y: DASH_TOP + 106, r: 38, redBelow: fuelLampAt });
+    this.navigator = new Navigator(scene, CONSOLE_X - 2, DASH_TOP - 24, CONSOLE_W + 4, 86, DEPTH + 1);
     this.wheel = new SteeringWheel(scene, DRIVER_X, H + 70, 210, DEPTH + 3);
   }
 

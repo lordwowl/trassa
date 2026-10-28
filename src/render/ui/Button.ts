@@ -6,6 +6,8 @@ export interface ButtonOptions {
   height?: number;
   color?: number;
   fontSize?: number;
+  /** Кнопка-«удержание» (гудок): true при нажатии, false при отпускании или уходе пальца. */
+  onHold?: (down: boolean) => void;
 }
 
 export function createButton(
@@ -26,11 +28,19 @@ export function createButton(
   const c = scene.add.container(x, y, [bg, text]);
   c.setSize(w, h);
   bg.setInteractive({ useHandCursor: true });
-  bg.on('pointerdown', () => bg.setFillStyle(Phaser.Display.Color.ValueToColor(color).darken(20).color));
-  bg.on('pointerout', () => bg.setFillStyle(color));
+  const hold = o.onHold;
+  bg.on('pointerdown', () => {
+    bg.setFillStyle(Phaser.Display.Color.ValueToColor(color).darken(20).color);
+    hold?.(true);
+  });
+  bg.on('pointerout', () => {
+    bg.setFillStyle(color);
+    hold?.(false);
+  });
   // pointerup — жест пользователя, нужен для requestFullscreen
   bg.on('pointerup', () => {
     bg.setFillStyle(color);
+    hold?.(false);
     onClick();
   });
   return c;
