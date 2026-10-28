@@ -4,7 +4,7 @@ import type { CarInput } from '../core/car';
 import { getTuning, type Tuning } from '../core/tuning';
 import { smooth, tiltToSteer } from './controlMath';
 import { KeyboardInput } from './Keyboard';
-import { loadControlSettings, saveControlSettings, type ControlSettings, type SteerMode } from './settings';
+import { loadControlSettings, saveControlSettings, type ControlSettings, type SteerMode, type Transmission } from './settings';
 import { TiltInput } from './TiltInput';
 import { TouchControls, type TouchState } from './TouchControls';
 
@@ -16,6 +16,8 @@ export class DriveControls {
   private readonly touchState: TouchState = { throttle: 0, brake: 0, steer: 0 };
   private tiltSteer = 0;
   private lastTiltActive = false;
+  /** Запрос переключения от кнопок ▲▼ или клавиатуры, ждёт шага физики. */
+  private pendingShift = 0;
 
   constructor(scene: Phaser.Scene, labels: { gas: string; brake: string }) {
     this.settings = loadControlSettings();
@@ -33,6 +35,21 @@ export class DriveControls {
 
   get mode(): SteerMode {
     return this.settings.steerMode;
+  }
+
+  get transmission(): Transmission {
+    return this.settings.transmission;
+  }
+
+  toggleTransmission(): void {
+    this.settings.transmission = this.settings.transmission === 'auto' ? 'manual' : 'auto';
+    this.pendingShift = 0;
+    saveControlSettings(this.settings);
+  }
+
+  /** Кнопки ▲▼ на консоли. */
+  requestShift(dir: number): void {
+    if (this.settings.transmission === 'manual') this.pendingShift = dir > 0 ? 1 : -1;
   }
 
   toggleMode(): void {
@@ -59,6 +76,14 @@ export class DriveControls {
     const t = this.touch.read(this.touchState, getTuning(tn, 'input.pedalMin'));
     const kb = this.keyboard;
     out.throttle = Math.max(t.throttle, kb.throttle);
+    out.manual = this.settings.transmission === 'manual';
+    const keyShift = kb.shiftRequest();
+    if (keyShift !== 0) this.requestShift(keyShift);
+    // Физика сбрасывает out.shift после обработки; новый запрос кладём, только когда прежний принят
+    if (out.shift === 0 && this.pendingShift !== 0) {
+      out.shift = this.pendingShift;
+      this.pendingShift = 0;
+    }
     out.brake = Math.max(t.brake, kb.brake);
 
     let steer = t.steer + kb.steer;

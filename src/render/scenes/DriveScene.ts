@@ -11,11 +11,8 @@ import { DriveControls } from '../../input/DriveControls';
 import { Cockpit } from '../cockpit/Cockpit';
 import { DAY_PALETTE, NIGHT_PALETTE, RoadRenderer, type RoadPalette, type RoadView } from '../road/RoadRenderer';
 import { RoadsideSprites, type KindHeights } from '../road/RoadsideSprites';
-import { createButton } from '../ui/Button';
+import { DriveHud } from '../ui/DriveHud';
 import { t } from '../ui/strings';
-
-/** Кнопки поверх кабины и педалей. */
-const HUD_DEPTH = 60;
 
 /** Размер пула придорожных спрайтов. */
 const SPRITE_POOL = 320;
@@ -57,13 +54,10 @@ export class DriveScene extends Phaser.Scene {
   private palette!: RoadPalette;
   private cockpit!: Cockpit;
   private controls!: DriveControls;
-  private modeButton!: Phaser.GameObjects.Container;
-  private calibrateButton!: Phaser.GameObjects.Container;
-  private shownTilt: boolean | null = null;
-  private shownMode: string | null = null;
+  private hud!: DriveHud;
   private car: CarState = createCarState();
   private carParams!: CarParams;
-  private readonly carInput: CarInput = { throttle: 0, brake: 0, steer: 0 };
+  private readonly carInput: CarInput = { throttle: 0, brake: 0, steer: 0, manual: false, shift: 0 };
   private readonly roadCtx: RoadContext = { curve: 0, grade: 0, halfWidth: 0 };
   private laneWidth = 3.5;
   private readonly projection: ProjectionView = { focal: 1, centerX: GAME_WIDTH / 2, horizonY: GAME_HEIGHT / 2 };
@@ -99,13 +93,8 @@ export class DriveScene extends Phaser.Scene {
     this.roadside = new RoadsideSprites(this, SPRITE_POOL);
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
-    this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'));
-    // Верхний ряд: низ экрана занят педалями и рулём
-    createButton(this, 106, 52, t('menu'), () => this.scene.start('menu'), { width: 180, height: 72, fontSize: 30, color: 0x44515e }).setDepth(HUD_DEPTH);
-    this.modeButton = createButton(this, 357, 52, '', () => this.controls.toggleMode(), { width: 290, height: 72, fontSize: 26, color: 0x44515e }).setDepth(HUD_DEPTH);
-    this.calibrateButton = createButton(this, 628, 52, t('calibrate'), () => this.controls.calibrate(), { width: 220, height: 72, fontSize: 26, color: 0x44515e }).setDepth(HUD_DEPTH);
-    this.shownTilt = null;
-    this.shownMode = null;
+    this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'), getTuning(this.ctx.tuning, 'car.redline'));
+    this.hud = new DriveHud(this, this.controls, () => this.scene.start('menu'));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.roadRenderer.destroy();
       this.roadside.destroy();
@@ -122,7 +111,7 @@ export class DriveScene extends Phaser.Scene {
     readCarParams(this.carParams, tn);
     this.laneWidth = getTuning(tn, 'road.laneWidth');
     this.controls.read(this.carInput, tn, deltaMs / 1000);
-    this.updateHud();
+    this.hud.update();
     advance(this.loop, deltaMs / 1000, this.tick);
     const car = this.car;
 
@@ -150,22 +139,12 @@ export class DriveScene extends Phaser.Scene {
     hgt.sign = getTuning(tn, 'roadside.signHeight');
     this.roadside.render(this.road, this.roadRenderer.sprites, hgt, this.palette.spriteTint, GAME_WIDTH, shake);
 
-    this.cockpit.update(car.speed * 3.6, car.steer * getTuning(tn, 'cockpit.wheelMaxAngle'));
+    this.cockpit.update(car.speed * 3.6, car.steer * getTuning(tn, 'cockpit.wheelMaxAngle'), car.rpm, car.gear, this.carInput.manual);
     const d = this.ctx.debug;
     d.speed = car.speed;
     d.segment = segmentIndexAt(this.road, car.z);
     d.x = car.x;
-  }
-
-  /** Подписи кнопок режима руля — только при изменении. */
-  private updateHud(): void {
-    const tilt = this.controls.tiltActive;
-    const mode = this.controls.mode;
-    if (tilt === this.shownTilt && mode === this.shownMode) return;
-    this.shownTilt = tilt;
-    this.shownMode = mode;
-    const label = this.modeButton.getAt(1) as Phaser.GameObjects.Text;
-    label.setText(mode === 'buttons' ? t('steerButtons') : tilt ? t('steerTilt') : t('steerTiltNoSensor'));
-    this.calibrateButton.setVisible(tilt);
+    d.rpm = car.rpm;
+    d.gear = car.gear;
   }
 }

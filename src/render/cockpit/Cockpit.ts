@@ -3,7 +3,7 @@
 // Стойки несимметричны: левая ближе к глазам — шире, правая дальше — тоньше.
 // Всё процедурное и статичное; в кадре меняются только стрелка и угол руля.
 import Phaser from 'phaser';
-import { Speedometer } from './Speedometer';
+import { Gauge } from './Gauge';
 import { SteeringWheel } from './SteeringWheel';
 
 /** Низ лобового стекла (верх приборной панели), px. */
@@ -19,10 +19,14 @@ const W = 1280;
 const H = 720;
 
 export class Cockpit {
-  readonly speedometer: Speedometer;
+  readonly speedometer: Gauge;
+  readonly tachometer: Gauge;
+  /** Кэш подписей «A1»…«M5» и чисел скорости — без создания строк в кадре. */
+  private readonly gearLabels: string[] = [];
+  private readonly kmhLabels: string[] = [];
   readonly wheel: SteeringWheel;
 
-  constructor(scene: Phaser.Scene, speedoMaxKmh: number) {
+  constructor(scene: Phaser.Scene, speedoMaxKmh: number, redline: number) {
     const g = scene.add.graphics().setDepth(DEPTH);
     // Крыша и стойки
     g.fillStyle(0x1c1e22);
@@ -64,12 +68,23 @@ export class Cockpit {
     // Торпедо пассажира: бардачок
     g.lineStyle(2, 0x2a2d33).strokeRoundedRect(CONSOLE_X + CONSOLE_W + 50, DASH_TOP + 110, 260, 80, 10);
 
-    this.speedometer = new Speedometer(scene, DRIVER_X, DASH_TOP + 82, 74, speedoMaxKmh, DEPTH + 1);
+    this.speedometer = new Gauge(scene, DRIVER_X, DASH_TOP + 82, 74, {
+      max: speedoMaxKmh, majorStep: 20, labelEvery: 2, labelDivisor: 1, redFrom: 120, unit: 'км/ч',
+    }, DEPTH + 1);
+    const rpmMax = Math.ceil((redline + 1000) / 1000) * 1000;
+    this.tachometer = new Gauge(scene, DRIVER_X + 170, DASH_TOP + 90, 60, {
+      max: rpmMax, majorStep: 1000, labelEvery: 1, labelDivisor: 1000, redFrom: redline, unit: 'об/мин ×1000',
+    }, DEPTH + 1);
+    for (let g = 0; g <= 5; g++) this.gearLabels.push(`A${g}`, `M${g}`);
+    for (let v = 0; v <= 400; v++) this.kmhLabels.push(String(v));
     this.wheel = new SteeringWheel(scene, DRIVER_X, H + 70, 210, DEPTH + 3);
   }
 
-  update(kmh: number, wheelDeg: number): void {
-    this.speedometer.set(kmh);
+  update(kmh: number, wheelDeg: number, rpm: number, gear: number, manual: boolean): void {
+    this.speedometer.setValue(kmh);
+    this.speedometer.setText(this.kmhLabels[Math.min(400, Math.max(0, Math.round(kmh)))] as string);
+    this.tachometer.setValue(rpm);
+    this.tachometer.setText(this.gearLabels[Math.min(5, gear) * 2 + (manual ? 1 : 0)] as string);
     this.wheel.setAngle(wheelDeg);
   }
 }

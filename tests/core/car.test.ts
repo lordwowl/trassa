@@ -8,8 +8,8 @@ import { createTuning, parseTuningData } from '../../src/core/tuning';
 const params = createCarParams(createTuning(parseTuningData(rawTuning)));
 const DT = 1 / 60;
 const flat: RoadContext = { curve: 0, grade: 0, halfWidth: 3.5 };
-const GAS: CarInput = { throttle: 1, brake: 0, steer: 0 };
-const COAST: CarInput = { throttle: 0, brake: 0, steer: 0 };
+const GAS: CarInput = { throttle: 1, brake: 0, steer: 0, manual: false, shift: 0 };
+const COAST: CarInput = { throttle: 0, brake: 0, steer: 0, manual: false, shift: 0 };
 
 function run(seconds: number, input: CarInput, road = flat, car = createCarState()) {
   for (let i = 0; i < Math.round(seconds / DT); i++) stepCar(car, input, params, road, DT);
@@ -38,7 +38,7 @@ describe('продольная динамика', () => {
 
   it('тормоз останавливает и не уводит скорость в минус', () => {
     const car = run(10, GAS);
-    run(10, { throttle: 0, brake: 1, steer: 0 }, flat, car);
+    run(10, { throttle: 0, brake: 1, steer: 0, manual: false, shift: 0 }, flat, car);
     expect(car.speed).toBe(0);
   });
 
@@ -58,20 +58,20 @@ describe('продольная динамика', () => {
 
 describe('боковая динамика', () => {
   it('руль не двигает стоящую машину', () => {
-    const car = run(1, { throttle: 0, brake: 1, steer: 1 });
+    const car = run(1, { throttle: 0, brake: 1, steer: 1, manual: false, shift: 0 });
     expect(car.x).toBe(0);
   });
 
   it('руль поворачивается плавно, а не мгновенно', () => {
     const car = createCarState();
-    stepCar(car, { throttle: 1, brake: 0, steer: 1 }, params, flat, DT);
+    stepCar(car, { throttle: 1, brake: 0, steer: 1, manual: false, shift: 0 }, params, flat, DT);
     expect(car.steer).toBeGreaterThan(0);
     expect(car.steer).toBeLessThan(1);
   });
 
   it('руль вправо смещает машину вправо', () => {
     const car = run(5, GAS);
-    run(0.5, { throttle: 1, brake: 0, steer: 1 }, flat, car);
+    run(0.5, { throttle: 1, brake: 0, steer: 1, manual: false, shift: 0 }, flat, car);
     expect(car.x).toBeGreaterThan(0.3);
   });
 
@@ -80,7 +80,7 @@ describe('боковая динамика', () => {
     const base = run(6, GAS);
     const drift = run(1, GAS, curve, { ...base });
     expect(drift.x).toBeLessThan(-0.2);
-    const held = run(1, { throttle: 1, brake: 0, steer: 0.5 }, curve, { ...base });
+    const held = run(1, { throttle: 1, brake: 0, steer: 0.5, manual: false, shift: 0 }, curve, { ...base });
     expect(held.x).toBeGreaterThan(drift.x);
   });
 });
@@ -96,7 +96,7 @@ describe('обочина', () => {
 
   it('дальше лимита за край не уехать', () => {
     const car = run(10, GAS);
-    run(10, { throttle: 1, brake: 0, steer: 1 }, flat, car);
+    run(10, { throttle: 1, brake: 0, steer: 1, manual: false, shift: 0 }, flat, car);
     expect(car.x).toBeCloseTo(flat.halfWidth + params.offroadLimit);
   });
 
