@@ -25,6 +25,10 @@ export class DriveControls {
   headlights: HeadlightMode = 0;
   /** Дворники: 0 — выкл, 1 — медленно, 2 — быстро. */
   wipers: 0 | 1 | 2 = 0;
+  /** Нажатие рычага поворотника, ждёт кадра сцены: −1, 1 или 0. */
+  private pendingSignal = 0;
+  /** Кнопка гудка удерживается. */
+  private hornButton = false;
 
   constructor(scene: Phaser.Scene, labels: { gas: string; brake: string }) {
     this.settings = loadControlSettings();
@@ -62,6 +66,26 @@ export class DriveControls {
     this.headlights = this.headlights === 0 ? 1 : this.headlights === 1 ? 2 : 0;
   }
 
+  /** Кнопки ◁ ▷ на панели. */
+  requestSignal(dir: number): void {
+    this.pendingSignal = dir;
+  }
+
+  /** Забрать нажатие рычага поворотника (одно за кадр). */
+  takeSignal(): number {
+    const d = this.pendingSignal;
+    this.pendingSignal = 0;
+    return d;
+  }
+
+  setHornButton(down: boolean): void {
+    this.hornButton = down;
+  }
+
+  get horn(): boolean {
+    return this.hornButton || this.keyboard.horn;
+  }
+
   /** Кнопки ▲▼ на консоли. */
   requestShift(dir: number): void {
     if (this.settings.transmission === 'manual') this.pendingShift = dir > 0 ? 1 : -1;
@@ -94,6 +118,8 @@ export class DriveControls {
     out.manual = this.settings.transmission === 'manual';
     if (kb.lightsPressed()) this.cycleHeadlights();
     if (kb.wipersPressed()) this.cycleWipers();
+    const keySignal = kb.signalPressed();
+    if (keySignal !== 0) this.requestSignal(keySignal);
     const keyShift = kb.shiftRequest();
     if (keyShift !== 0) this.requestShift(keyShift);
     // Физика сбрасывает out.shift после обработки; новый запрос кладём, только когда прежний принят

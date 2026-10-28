@@ -2,3 +2,4 @@
 export * from './types';
 export * from './physics';
 export * from './gearbox';
+export * from './signals';
