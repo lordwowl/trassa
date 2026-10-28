@@ -22,6 +22,13 @@
       "step": 0.01,
       "label": "Линия горизонта, доля высоты экрана"
     },
+    "render.shake": {
+      "value": 4,
+      "min": 0,
+      "max": 15,
+      "step": 0.5,
+      "label": "Тряска на обочине, px"
+    },
     "road.segmentLength": {
       "value": 5,
       "min": 2,
@@ -78,6 +85,13 @@
       "step": 500,
       "label": "Длина тестовой трассы, м (новая трасса)"
     },
+    "world.distanceScale": {
+      "value": 0.1,
+      "min": 0.02,
+      "max": 1,
+      "step": 0.01,
+      "label": "Сжатие расстояний"
+    },
     "car.maxSpeed": {
       "value": 40,
       "min": 10,
@@ -90,7 +104,7 @@
       "min": 0.5,
       "max": 15,
       "step": 0.5,
-      "label": "Разгон, м/с²"
+      "label": "Разгон с места, м/с²"
     },
     "car.braking": {
       "value": 9,
@@ -100,11 +114,46 @@
       "label": "Торможение, м/с²"
     },
     "car.drag": {
-      "value": 0.02,
+      "value": 0.0006,
       "min": 0,
-      "max": 0.1,
-      "step": 0.005,
-      "label": "Сопротивление"
+      "max": 0.003,
+      "step": 0.0001,
+      "label": "Сопротивление воздуха, 1/м"
+    },
+    "car.rolling": {
+      "value": 0.3,
+      "min": 0,
+      "max": 2,
+      "step": 0.05,
+      "label": "Сопротивление качения, м/с²"
+    },
+    "car.engineBrake": {
+      "value": 1,
+      "min": 0,
+      "max": 4,
+      "step": 0.1,
+      "label": "Торможение двигателем, м/с²"
+    },
+    "car.gravity": {
+      "value": 1,
+      "min": 0,
+      "max": 2,
+      "step": 0.1,
+      "label": "Влияние уклона"
+    },
+    "car.steerGain": {
+      "value": 0.2,
+      "min": 0.05,
+      "max": 0.6,
+      "step": 0.01,
+      "label": "Чувствительность руля"
+    },
+    "car.steerResponse": {
+      "value": 6,
+      "min": 1,
+      "max": 20,
+      "step": 0.5,
+      "label": "Скорость реакции руля, 1/с"
     },
     "car.centrifugal": {
       "value": 0.3,
@@ -113,12 +162,26 @@
       "step": 0.05,
       "label": "Центробежный снос"
     },
-    "world.distanceScale": {
-      "value": 0.1,
-      "min": 0.02,
-      "max": 1,
-      "step": 0.01,
-      "label": "Сжатие расстояний"
+    "car.offroadDecel": {
+      "value": 6,
+      "min": 0,
+      "max": 20,
+      "step": 0.5,
+      "label": "Торможение обочиной, м/с²"
+    },
+    "car.offroadMaxSpeed": {
+      "value": 15,
+      "min": 3,
+      "max": 40,
+      "step": 1,
+      "label": "Скорость на обочине до, м/с"
+    },
+    "car.offroadLimit": {
+      "value": 8,
+      "min": 2,
+      "max": 20,
+      "step": 0.5,
+      "label": "Насколько можно съехать с дороги, м"
     }
   }
 }
