@@ -23,5 +23,8 @@
   "calibrate": "Калибровать",
   "steerTiltNoSensor": "Наклон: нет датчика",
   "gearAuto": "КПП: авто",
-  "gearManual": "КПП: механика"
+  "gearManual": "КПП: механика",
+  "lightsOff": "Фары: выкл",
+  "lightsLow": "Фары: ближ.",
+  "lightsHigh": "Фары: дальн."
 }
