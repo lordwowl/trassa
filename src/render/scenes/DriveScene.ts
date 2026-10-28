@@ -1,4 +1,4 @@
-// Сцена езды. Псевдо-3D трасса по seed, физика машины (core/car), временное управление до M1.3.
+// Сцена езды. Псевдо-3D трасса по seed, физика машины (core/car), управление: педали, руль наклоном или кнопками, клавиатура.
 import Phaser from 'phaser';
 import { GAME_HEIGHT, GAME_WIDTH } from '../../config';
 import { getContext, type GameContext } from '../../context';
@@ -7,7 +7,7 @@ import { advance, createFixedStep, type FixedStep } from '../../core/loop';
 import { createRng, hashSeed } from '../../core/rng';
 import { focalFromFov, generateRoad, segmentIndexAt, type ProjectionView, type Road } from '../../core/road';
 import { getTuning, type Tuning } from '../../core/tuning';
-import { SimpleControls } from '../../input/SimpleControls';
+import { DriveControls } from '../../input/DriveControls';
 import { DAY_PALETTE, NIGHT_PALETTE, RoadRenderer, type RoadPalette, type RoadView } from '../road/RoadRenderer';
 import { createButton } from '../ui/Button';
 import { t } from '../ui/strings';
@@ -36,7 +36,11 @@ export class DriveScene extends Phaser.Scene {
   private roadRenderer!: RoadRenderer;
   private palette!: RoadPalette;
   private speedText!: Phaser.GameObjects.Text;
-  private controls!: SimpleControls;
+  private controls!: DriveControls;
+  private modeButton!: Phaser.GameObjects.Container;
+  private calibrateButton!: Phaser.GameObjects.Container;
+  private shownTilt: boolean | null = null;
+  private shownMode: string | null = null;
   private car: CarState = createCarState();
   private carParams!: CarParams;
   private readonly carInput: CarInput = { throttle: 0, brake: 0, steer: 0 };
@@ -72,11 +76,16 @@ export class DriveScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(this.palette.sky);
     const maxDraw = this.ctx.tuning.data.params['render.drawDistance']?.max ?? 600;
     this.roadRenderer = new RoadRenderer(this, maxDraw);
-    this.controls = new SimpleControls(this);
+    this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
-    this.speedText = this.add.text(1240, 690, '', { fontFamily: 'monospace', fontSize: '40px', color: '#ffffff' })
-      .setOrigin(1, 1).setShadow(2, 2, '#000000', 4);
-    createButton(this, 160, 650, t('back'), () => this.scene.start('menu'), { width: 240, height: 88 });
+    this.speedText = this.add.text(1000, 52, '', { fontFamily: 'monospace', fontSize: '40px', color: '#ffffff' })
+      .setOrigin(1, 0.5).setShadow(2, 2, '#000000', 4);
+    // Верхний ряд: низ экрана занят педалями и рулём
+    createButton(this, 106, 52, t('menu'), () => this.scene.start('menu'), { width: 180, height: 72, fontSize: 30, color: 0x44515e });
+    this.modeButton = createButton(this, 357, 52, '', () => this.controls.toggleMode(), { width: 290, height: 72, fontSize: 26, color: 0x44515e });
+    this.calibrateButton = createButton(this, 628, 52, t('calibrate'), () => this.controls.calibrate(), { width: 220, height: 72, fontSize: 26, color: 0x44515e });
+    this.shownTilt = null;
+    this.shownMode = null;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.roadRenderer.destroy());
   }
 
@@ -89,7 +98,8 @@ export class DriveScene extends Phaser.Scene {
     const tn = this.ctx.tuning;
     readCarParams(this.carParams, tn);
     this.laneWidth = getTuning(tn, 'road.laneWidth');
-    this.controls.read(this.carInput);
+    this.controls.read(this.carInput, tn, deltaMs / 1000);
+    this.updateHud();
     advance(this.loop, deltaMs / 1000, this.tick);
     const car = this.car;
 
@@ -119,5 +129,17 @@ export class DriveScene extends Phaser.Scene {
     d.speed = car.speed;
     d.segment = segmentIndexAt(this.road, car.z);
     d.x = car.x;
+  }
+
+  /** Подписи кнопок режима руля — только при изменении. */
+  private updateHud(): void {
+    const tilt = this.controls.tiltActive;
+    const mode = this.controls.mode;
+    if (tilt === this.shownTilt && mode === this.shownMode) return;
+    this.shownTilt = tilt;
+    this.shownMode = mode;
+    const label = this.modeButton.getAt(1) as Phaser.GameObjects.Text;
+    label.setText(mode === 'buttons' ? t('steerButtons') : tilt ? t('steerTilt') : t('steerTiltNoSensor'));
+    this.calibrateButton.setVisible(tilt);
   }
 }

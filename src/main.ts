@@ -44,7 +44,8 @@ const game = new Phaser.Game({
     // Fullscreen на контейнер, чтобы DOM-оверлеи (debug-панель) оставались видны
     fullscreenTarget: 'game',
   },
-  input: { activePointers: 3 },
+  // Руль + газ + тормоз + запас
+  input: { activePointers: 4 },
   fps: { target: 60 },
   scene: [BootScene, MenuScene, DriveScene, MapScene, CityScene, DebugScene],
 });
