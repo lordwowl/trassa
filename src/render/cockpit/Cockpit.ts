@@ -25,6 +25,8 @@ export class Cockpit {
   private readonly gearLabels: string[] = [];
   private readonly kmhLabels: string[] = [];
   readonly wheel: SteeringWheel;
+  private readonly clock: Phaser.GameObjects.Text;
+  private shownClock = '';
 
   constructor(scene: Phaser.Scene, speedoMaxKmh: number, redline: number) {
     const g = scene.add.graphics().setDepth(DEPTH);
@@ -55,15 +57,16 @@ export class Cockpit {
     // Козырёк над приборами
     g.fillStyle(0x101114).fillEllipse(DRIVER_X, DASH_TOP + 4, 300, 44);
 
-    // Центральная консоль: место под магнитолу/навигатор (M2) и решётки обдува
+    // Центральная консоль: часы, место под магнитолу/навигатор (M2.5)
     const cy = DASH_TOP + 70;
     g.fillStyle(0x121317).fillRoundedRect(CONSOLE_X, cy, CONSOLE_W, H - cy + 20, 14);
     g.lineStyle(2, 0x2f333a).strokeRoundedRect(CONSOLE_X, cy, CONSOLE_W, H - cy + 20, 14);
-    g.fillStyle(0x0a0b0d).fillRoundedRect(CONSOLE_X + 18, cy + 18, CONSOLE_W - 36, 30, 6);
-    g.lineStyle(2, 0x2a2d33);
-    for (let i = 0; i < 4; i++) g.lineBetween(CONSOLE_X + 22, cy + 24 + i * 7, CONSOLE_X + CONSOLE_W - 22, cy + 24 + i * 7);
-    g.fillStyle(0x1d2025).fillRoundedRect(CONSOLE_X + 18, cy + 64, CONSOLE_W - 36, 80, 8);
-    g.lineStyle(2, 0x343841).strokeRoundedRect(CONSOLE_X + 18, cy + 64, CONSOLE_W - 36, 80, 8);
+    g.fillStyle(0x060a08).fillRoundedRect(CONSOLE_X + 18, cy + 10, CONSOLE_W - 36, 36, 6);
+    g.lineStyle(2, 0x2a2d33).strokeRoundedRect(CONSOLE_X + 18, cy + 10, CONSOLE_W - 36, 36, 6);
+    this.clock = scene.add
+      .text(CONSOLE_X + CONSOLE_W / 2, cy + 28, '', { fontFamily: 'monospace', fontSize: '26px', color: '#5dff9a' })
+      .setOrigin(0.5)
+      .setDepth(DEPTH + 1);
 
     // Торпедо пассажира: бардачок
     g.lineStyle(2, 0x2a2d33).strokeRoundedRect(CONSOLE_X + CONSOLE_W + 50, DASH_TOP + 110, 260, 80, 10);
@@ -78,6 +81,14 @@ export class Cockpit {
     for (let g = 0; g <= 5; g++) this.gearLabels.push(`A${g}`, `M${g}`);
     for (let v = 0; v <= 400; v++) this.kmhLabels.push(String(v));
     this.wheel = new SteeringWheel(scene, DRIVER_X, H + 70, 210, DEPTH + 3);
+  }
+
+  /** Часы на консоли; строку передавать только при смене минуты. */
+  setClock(text: string): void {
+    if (text !== this.shownClock) {
+      this.shownClock = text;
+      this.clock.setText(text);
+    }
   }
 
   update(kmh: number, wheelDeg: number, rpm: number, gear: number, manual: boolean): void {

@@ -2,6 +2,7 @@
 // Порядок — от дальних к ближним (depth растёт), объекты за гребнем холма обрезаются снизу.
 import Phaser from 'phaser';
 import type { Road, RoadObjectKind, RoadSegment } from '../../core/road';
+import { shade, type Lighting } from './lighting';
 import type { SpriteSegments } from './RoadRenderer';
 
 /** Вид объекта → ключ текстуры из render/sprites/registry.ts. */
@@ -31,7 +32,7 @@ export class RoadsideSprites {
     }
   }
 
-  render(road: Road, sp: SpriteSegments, heights: KindHeights, tint: number, screenW: number, yOffset: number): void {
+  render(road: Road, sp: SpriteSegments, heights: KindHeights, lit: Lighting, screenW: number, yOffset: number): void {
     let used = 0;
     const pool = this.pool;
     // От дальних к ближним: ближние получают больший depth и рисуются поверх
@@ -43,6 +44,8 @@ export class RoadsideSprites {
       const baseX = sp.x[k] as number;
       const baseY = sp.y[k] as number;
       const clip = sp.clip[k] as number;
+      // Освещение по расстоянию: ночью вне фар — силуэты
+      const tint = shade(0xffffff, lit, sp.z[k] as number);
       for (let j = 0; j < objects.length && used < pool.length; j++) {
         const o = objects[j]!;
         const h = heights[o.kind] * o.scale * scale;

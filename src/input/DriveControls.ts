@@ -8,6 +8,9 @@ import { loadControlSettings, saveControlSettings, type ControlSettings, type St
 import { TiltInput } from './TiltInput';
 import { TouchControls, type TouchState } from './TouchControls';
 
+/** Фары: 0 — выкл, 1 — ближний, 2 — дальний. */
+export type HeadlightMode = 0 | 1 | 2;
+
 export class DriveControls {
   readonly settings: ControlSettings;
   readonly touch: TouchControls;
@@ -18,6 +21,8 @@ export class DriveControls {
   private lastTiltActive = false;
   /** Запрос переключения от кнопок ▲▼ или клавиатуры, ждёт шага физики. */
   private pendingShift = 0;
+  /** Фары — состояние машины в рейсе, не настройка: в начале выключены. */
+  headlights: HeadlightMode = 0;
 
   constructor(scene: Phaser.Scene, labels: { gas: string; brake: string }) {
     this.settings = loadControlSettings();
@@ -45,6 +50,10 @@ export class DriveControls {
     this.settings.transmission = this.settings.transmission === 'auto' ? 'manual' : 'auto';
     this.pendingShift = 0;
     saveControlSettings(this.settings);
+  }
+
+  cycleHeadlights(): void {
+    this.headlights = this.headlights === 0 ? 1 : this.headlights === 1 ? 2 : 0;
   }
 
   /** Кнопки ▲▼ на консоли. */
@@ -77,6 +86,7 @@ export class DriveControls {
     const kb = this.keyboard;
     out.throttle = Math.max(t.throttle, kb.throttle);
     out.manual = this.settings.transmission === 'manual';
+    if (kb.lightsPressed()) this.cycleHeadlights();
     const keyShift = kb.shiftRequest();
     if (keyShift !== 0) this.requestShift(keyShift);
     // Физика сбрасывает out.shift после обработки; новый запрос кладём, только когда прежний принят

@@ -1,4 +1,4 @@
-// Клавиатура для десктопа: ↑/W — газ, ↓/S/пробел — тормоз, ←/→ или A/D — руль, Shift/E — передача вверх, Ctrl/Q — вниз.
+// Клавиатура для десктопа: ↑/W — газ, ↓/S/пробел — тормоз, ←/→ или A/D — руль, Shift/E — передача вверх, Ctrl/Q — вниз, L — фары.
 import Phaser from 'phaser';
 
 const K = Phaser.Input.Keyboard.KeyCodes;
@@ -16,6 +16,7 @@ export class KeyboardInput {
           [kb.addKey(K.RIGHT), kb.addKey(K.D)],
           [kb.addKey(K.SHIFT), kb.addKey(K.E)],
           [kb.addKey(K.CTRL), kb.addKey(K.Q)],
+          [kb.addKey(K.L)],
         ]
       : null;
   }
@@ -39,6 +40,11 @@ export class KeyboardInput {
   /** Запрос переключения передачи за этот кадр: +1, −1 или 0. */
   shiftRequest(): number {
     return (this.justDown(4) ? 1 : 0) - (this.justDown(5) ? 1 : 0);
+  }
+
+  /** Нажата клавиша фар в этом кадре. */
+  lightsPressed(): boolean {
+    return this.justDown(6);
   }
 
   get throttle(): number {

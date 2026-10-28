@@ -4,9 +4,10 @@
 // В кадре нет аллокаций: только числовые массивы, созданные в конструкторе.
 import Phaser from 'phaser';
 import { heightAt, project, type ProjectionView, type Projected, type Road, type RoadSegment } from '../../core/road';
+import { shade, type Lighting } from './lighting';
 
+/** Цвета дороги при полном дневном свете; ночь, закат и фары — через освещение (lighting.ts). */
 export interface RoadPalette {
-  sky: number;
   grassLight: number;
   grassDark: number;
   roadLight: number;
@@ -14,12 +15,9 @@ export interface RoadPalette {
   rumbleLight: number;
   rumbleDark: number;
   lane: number;
-  /** Тонировка придорожных спрайтов (ночью темнее). */
-  spriteTint: number;
 }
 
-export const DAY_PALETTE: RoadPalette = {
-  sky: 0x5fb4f0,
+export const ROAD_PALETTE: RoadPalette = {
   grassLight: 0x5cae3a,
   grassDark: 0x4e9e30,
   roadLight: 0x6a6f74,
@@ -27,19 +25,6 @@ export const DAY_PALETTE: RoadPalette = {
   rumbleLight: 0xf2f2f2,
   rumbleDark: 0xc0392b,
   lane: 0xf2f2f2,
-  spriteTint: 0xffffff,
-};
-
-export const NIGHT_PALETTE: RoadPalette = {
-  sky: 0x0b1530,
-  grassLight: 0x1f3a1c,
-  grassDark: 0x1a3318,
-  roadLight: 0x2c2f33,
-  roadDark: 0x282b2f,
-  rumbleLight: 0x8a8a8a,
-  rumbleDark: 0x5a1f1a,
-  lane: 0x9a9a9a,
-  spriteTint: 0x3c4660,
 };
 
 export interface RoadView {
@@ -82,6 +67,8 @@ export interface SpriteSegments {
   y: Float32Array;
   scale: Float32Array;
   clip: Float32Array;
+  /** Расстояние от камеры, м (для освещения). */
+  z: Float32Array;
 }
 
 export class RoadRenderer {
@@ -98,6 +85,8 @@ export class RoadRenderer {
   private readonly gb: Float32Array;
   private readonly seg: Int32Array;
   private readonly lanes: Int32Array;
+  /** Расстояние до ближнего края сегмента, м — для освещения. */
+  private readonly zz: Float32Array;
   private readonly p: Projected = { x: 0, y: 0, scale: 0 };
   readonly sprites: SpriteSegments;
 
@@ -113,6 +102,7 @@ export class RoadRenderer {
     this.gb = new Float32Array(maxDrawDistance);
     this.seg = new Int32Array(maxDrawDistance);
     this.lanes = new Int32Array(maxDrawDistance);
+    this.zz = new Float32Array(maxDrawDistance);
     this.sprites = {
       count: 0,
       segment: new Int32Array(maxDrawDistance),
@@ -120,6 +110,7 @@ export class RoadRenderer {
       y: new Float32Array(maxDrawDistance),
       scale: new Float32Array(maxDrawDistance),
       clip: new Float32Array(maxDrawDistance),
+      z: new Float32Array(maxDrawDistance),
     };
   }
 
@@ -127,7 +118,7 @@ export class RoadRenderer {
     return this.g;
   }
 
-  render(road: Road, v: RoadView, pal: RoadPalette): void {
+  render(road: Road, v: RoadView, pal: RoadPalette, lit: Lighting): void {
     const g = this.g;
     g.clear();
     const segs = road.segments;
@@ -138,7 +129,7 @@ export class RoadRenderer {
 
     // Земля до горизонта: закрывает просвет между дальним краем дороги и горизонтом
     const horizon = v.view.horizonY;
-    g.fillStyle(pal.grassDark);
+    g.fillStyle(shade(pal.grassDark, lit, v.drawDistance * L));
     g.fillRect(0, horizon, v.width, v.height - horizon);
 
     const zWrapped = ((v.z % road.length) + road.length) % road.length;
@@ -176,6 +167,7 @@ export class RoadRenderer {
         sp.y[k] = this.p.y;
         sp.scale[k] = this.p.scale;
         sp.clip[k] = top;
+        sp.z[k] = za;
       }
       if (zb <= NEAR_Z) continue;
       if (za < NEAR_Z) {
@@ -205,6 +197,7 @@ export class RoadRenderer {
       this.w2[count] = halfW * p.scale;
       this.seg[count] = base + i;
       this.lanes[count] = s.lanes;
+      this.zz[count] = za;
       count++;
     }
 
@@ -217,19 +210,20 @@ export class RoadRenderer {
       const y2 = this.y2[k] as number;
       const w2 = this.w2[k] as number;
       const lanes = this.lanes[k] as number;
+      const z = this.zz[k] as number;
       const light = Math.floor((this.seg[k] as number) / STRIPE_LENGTH) % 2 === 0;
       // Без округления: иначе полоса травы на пиксель залезает на дальний асфальт
       const gb = this.gb[k] as number;
-      g.fillStyle(light ? pal.grassLight : pal.grassDark);
+      g.fillStyle(shade(light ? pal.grassLight : pal.grassDark, lit, z));
       g.fillRect(0, y2, v.width, gb - y2);
 
       // Обочина-«зебра»: шире полотна на RUMBLE_WIDTH с каждой стороны
       const r1 = w1 * (1 + rumbleK / lanes);
       const r2 = w2 * (1 + rumbleK / lanes);
-      g.fillStyle(light ? pal.rumbleLight : pal.rumbleDark);
+      g.fillStyle(shade(light ? pal.rumbleLight : pal.rumbleDark, lit, z));
       quad(g, x1, y1, r1, x2, y2, r2);
 
-      g.fillStyle(light ? pal.roadLight : pal.roadDark);
+      g.fillStyle(shade(light ? pal.roadLight : pal.roadDark, lit, z));
       quad(g, x1, y1, w1, x2, y2, w2);
 
       // Разметка между полосами — пунктир
@@ -237,7 +231,7 @@ export class RoadRenderer {
         // w — полуширина полотна в px; полуширина линии = w · (LANE_LINE_WIDTH / 2) / halfW
         const lw1 = (w1 * LANE_LINE_WIDTH) / (lanes * v.laneWidth);
         const lw2 = (w2 * LANE_LINE_WIDTH) / (lanes * v.laneWidth);
-        g.fillStyle(pal.lane);
+        g.fillStyle(shade(pal.lane, lit, z));
         for (let lane = 1; lane < lanes; lane++) {
           const f = (2 * lane) / lanes - 1;
           quad(g, x1 + w1 * f, y1, lw1, x2 + w2 * f, y2, lw2);

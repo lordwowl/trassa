@@ -392,6 +392,41 @@
       "max": 5,
       "step": 0.1,
       "label": "Высота знаков, м"
+    },
+    "world.timeSpeed": {
+      "value": 30,
+      "min": 0,
+      "max": 600,
+      "step": 10,
+      "label": "Скорость игрового времени (игровых секунд в реальной)"
+    },
+    "light.nightAmbient": {
+      "value": 0.1,
+      "min": 0,
+      "max": 0.6,
+      "step": 0.02,
+      "label": "Свет ночью без фар"
+    },
+    "light.lowRange": {
+      "value": 45,
+      "min": 15,
+      "max": 120,
+      "step": 5,
+      "label": "Ближний свет, м"
+    },
+    "light.highRange": {
+      "value": 110,
+      "min": 40,
+      "max": 250,
+      "step": 5,
+      "label": "Дальний свет, м"
+    },
+    "light.beamIntensity": {
+      "value": 0.85,
+      "min": 0.3,
+      "max": 1.2,
+      "step": 0.05,
+      "label": "Яркость фар"
     }
   }
 }
