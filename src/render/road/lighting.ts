@@ -10,6 +10,10 @@ export interface LightingParams {
   lowRange: number;
   highRange: number;
   beamIntensity: number;
+  /** Полуширина полосы полного света фар, м (от оси машины). */
+  beamWidth: number;
+  /** Ширина мягкого края луча, м: дальше — темнота. */
+  beamFade: number;
 }
 
 export interface Lighting {
@@ -20,10 +24,12 @@ export interface Lighting {
   /** Дальность фар, м (0 — фары выключены). */
   beamRange: number;
   beamIntensity: number;
+  beamWidth: number;
+  beamFade: number;
 }
 
 export function createLighting(): Lighting {
-  return { ambient: 1, tintR: 1, tintG: 1, tintB: 1, beamRange: 0, beamIntensity: 0 };
+  return { ambient: 1, tintR: 1, tintG: 1, tintB: 1, beamRange: 0, beamIntensity: 0, beamWidth: 4, beamFade: 3 };
 }
 
 /** Оттенки: ночь синеватая, рассвет/закат тёплый. */
@@ -42,14 +48,26 @@ export function updateLighting(out: Lighting, hour: number, lights: Headlights, 
   out.tintB = b + (WARM_TINT[2] - b) * w;
   out.beamRange = lights === 2 ? p.highRange : lights === 1 ? p.lowRange : 0;
   out.beamIntensity = p.beamIntensity;
+  // Дальний свет чуть шире ближнего
+  out.beamWidth = lights === 2 ? p.beamWidth * 1.2 : p.beamWidth;
+  out.beamFade = p.beamFade;
   return out;
 }
 
-/** Свет фар на расстоянии z, 0..1: полный до половины дальности, дальше спадает до нуля. */
-export function beamAt(l: Lighting, z: number): number {
+/**
+ * Свет фар в точке на расстоянии z и сбоку от оси машины на lateral (м), 0..1.
+ * По дальности: полный до половины дальности, дальше спад. Вбок: полный в полосе beamWidth,
+ * затем мягкий спад на beamFade — дальше темнота.
+ */
+export function beamAt(l: Lighting, z: number, lateral = 0): number {
   if (l.beamRange <= 0 || z < 0) return 0;
   const k = (l.beamRange - z) / (l.beamRange * 0.5);
-  return l.beamIntensity * (k <= 0 ? 0 : k >= 1 ? 1 : k);
+  if (k <= 0) return 0;
+  const side = lateral < 0 ? -lateral : lateral;
+  let s = 1;
+  if (side > l.beamWidth) s = l.beamFade > 0 ? 1 - (side - l.beamWidth) / l.beamFade : 0;
+  if (s <= 0) return 0;
+  return l.beamIntensity * (k >= 1 ? 1 : k) * s;
 }
 
 function channel(c: number, amb: number, tint: number, beam: number): number {
@@ -59,9 +77,9 @@ function channel(c: number, amb: number, tint: number, beam: number): number {
   return v > 255 ? 255 : v < 0 ? 0 : v | 0;
 }
 
-/** Цвет 0xRRGGBB при освещении на расстоянии z. */
-export function shade(color: number, l: Lighting, z: number): number {
-  const beam = beamAt(l, z);
+/** Цвет 0xRRGGBB при освещении на расстоянии z и смещении lateral от оси машины. */
+export function shade(color: number, l: Lighting, z: number, lateral = 0): number {
+  const beam = beamAt(l, z, lateral);
   const r = channel((color >> 16) & 0xff, l.ambient, l.tintR, beam);
   const g = channel((color >> 8) & 0xff, l.ambient, l.tintG, beam);
   const b = channel(color & 0xff, l.ambient, l.tintB, beam);

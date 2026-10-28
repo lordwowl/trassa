@@ -32,7 +32,7 @@ export class RoadsideSprites {
     }
   }
 
-  render(road: Road, sp: SpriteSegments, heights: KindHeights, lit: Lighting, screenW: number, yOffset: number): void {
+  render(road: Road, sp: SpriteSegments, heights: KindHeights, lit: Lighting, screenW: number, centerX: number, yOffset: number): void {
     let used = 0;
     const pool = this.pool;
     // От дальних к ближним: ближние получают больший depth и рисуются поверх
@@ -44,8 +44,7 @@ export class RoadsideSprites {
       const baseX = sp.x[k] as number;
       const baseY = sp.y[k] as number;
       const clip = sp.clip[k] as number;
-      // Освещение по расстоянию: ночью вне фар — силуэты
-      const tint = shade(0xffffff, lit, sp.z[k] as number);
+      const z = sp.z[k] as number;
       for (let j = 0; j < objects.length && used < pool.length; j++) {
         const o = objects[j]!;
         const h = heights[o.kind] * o.scale * scale;
@@ -68,7 +67,8 @@ export class RoadsideSprites {
         // Низ за холмом — обрезаем по линии clip
         if (baseY > clip) img.setCrop(0, 0, fw, (fh * (clip - top)) / h);
         else if (img.isCropped) img.setCrop();
-        img.setTint(tint);
+        // Освещение по расстоянию и смещению от оси машины: ночью вне луча — силуэты
+        img.setTint(shade(0xffffff, lit, z, (sx - centerX) / scale));
         img.setDepth(DEPTH_BASE + used * DEPTH_STEP);
         img.setVisible(true);
         used++;

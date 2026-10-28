@@ -427,6 +427,20 @@
       "max": 1.2,
       "step": 0.05,
       "label": "Яркость фар"
+    },
+    "light.beamWidth": {
+      "value": 4,
+      "min": 1.5,
+      "max": 12,
+      "step": 0.5,
+      "label": "Ширина луча фар от оси, м"
+    },
+    "light.beamFade": {
+      "value": 3,
+      "min": 0,
+      "max": 10,
+      "step": 0.5,
+      "label": "Мягкость края луча, м"
     }
   }
 }

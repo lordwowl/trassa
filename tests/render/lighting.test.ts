@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { beamAt, createLighting, lerpColor, shade, skyColors, updateLighting } from '../../src/render/road/lighting';
 
-const params = { nightAmbient: 0.1, lowRange: 45, highRange: 110, beamIntensity: 0.85 };
+const params = { nightAmbient: 0.1, lowRange: 45, highRange: 110, beamIntensity: 0.85, beamWidth: 4, beamFade: 3 };
 
 describe('освещение', () => {
   it('днём цвета не меняются', () => {
@@ -26,6 +26,17 @@ describe('освещение', () => {
     expect(beamAt(high, 60)).toBeGreaterThan(0.5);
     expect(beamAt(high, 10)).toBeCloseTo(0.85);
     expect(beamAt(updateLighting(createLighting(), 1, 0, params), 10)).toBe(0);
+  });
+
+  it('луч узкий: по оси полный, на краю мягкий спад, сбоку темно', () => {
+    const low = updateLighting(createLighting(), 1, 1, params);
+    expect(beamAt(low, 10, 0)).toBeCloseTo(0.85);
+    expect(beamAt(low, 10, -3.9)).toBeCloseTo(0.85);
+    expect(beamAt(low, 10, 5.5)).toBeCloseTo(0.85 * 0.5);
+    expect(beamAt(low, 10, 8)).toBe(0);
+    expect(shade(0x808080, low, 10, 20)).toBe(shade(0x808080, updateLighting(createLighting(), 1, 0, params), 10));
+    const high = updateLighting(createLighting(), 1, 2, params);
+    expect(beamAt(high, 10, 4.5)).toBeCloseTo(0.85);
   });
 
   it('интерполяция цвета и небо', () => {
