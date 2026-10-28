@@ -86,6 +86,8 @@ export interface RoadContext {
   grade: number;
   /** Половина ширины полотна, м. */
   halfWidth: number;
+  /** Сцепление 0..1 (1 — сухо; мокро/снег — меньше): тормоз слабее, руль мягче, снос сильнее. */
+  grip: number;
 }
 
 export function createCarState(): CarState {

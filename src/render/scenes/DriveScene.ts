@@ -15,6 +15,7 @@ import { ROAD_PALETTE, RoadRenderer, type RoadView } from '../road/RoadRenderer'
 import { Sky } from '../road/Sky';
 import { RoadsideSprites, type KindHeights } from '../road/RoadsideSprites';
 import { DriveHud } from '../ui/DriveHud';
+import { DriveWeather } from './DriveWeather';
 import { t } from '../ui/strings';
 
 /** Размер пула придорожных спрайтов. */
@@ -50,6 +51,7 @@ export class DriveScene extends Phaser.Scene {
   private roadside!: RoadsideSprites;
   private readonly heights: KindHeights = { tree: 9, tree_round: 7, pole: 8, sign: 2.6 };
   private sky!: Sky;
+  private weather!: DriveWeather;
   private readonly lighting = createLighting();
   private readonly lightParams: LightingParams = { nightAmbient: 0.1, lowRange: 45, highRange: 110, beamIntensity: 0.85, beamWidth: 4, beamFade: 3 };
   /** Минута, показанная на часах (строка часов создаётся только при её смене). */
@@ -61,7 +63,7 @@ export class DriveScene extends Phaser.Scene {
   private car: CarState = createCarState();
   private carParams!: CarParams;
   private readonly carInput: CarInput = { throttle: 0, brake: 0, steer: 0, manual: false, shift: 0 };
-  private readonly roadCtx: RoadContext = { curve: 0, grade: 0, halfWidth: 0 };
+  private readonly roadCtx: RoadContext = { curve: 0, grade: 0, halfWidth: 0, grip: 1 };
   private laneWidth = 3.5;
   private readonly projection: ProjectionView = { focal: 1, centerX: GAME_WIDTH / 2, horizonY: GAME_HEIGHT / 2 };
   private readonly view: RoadView = {
@@ -90,6 +92,7 @@ export class DriveScene extends Phaser.Scene {
 
     this.road = buildRoad(this.ctx.state.seed, this.ctx.tuning);
     this.sky = new Sky(this);
+    this.weather = new DriveWeather(this, this.ctx.state.seed);
     this.shownMinute = -1;
     const maxDraw = this.ctx.tuning.data.params['render.drawDistance']?.max ?? 600;
     this.roadRenderer = new RoadRenderer(this, maxDraw);
@@ -106,7 +109,9 @@ export class DriveScene extends Phaser.Scene {
 
   private tick = (dt: number): void => {
     readRoadContext(this.roadCtx, this.road, this.car.z, this.laneWidth);
+    this.roadCtx.grip = this.weather.effects.grip;
     stepCar(this.car, this.carInput, this.carParams, this.roadCtx, dt);
+    this.weather.step(dt, this.car.speed, this.controls.wipers);
     const st = this.ctx.state;
     st.timeOfDay = advanceClock(st.timeOfDay, dt, this.timeSpeed);
   };
@@ -114,6 +119,7 @@ export class DriveScene extends Phaser.Scene {
   override update(time: number, deltaMs: number): void {
     const tn = this.ctx.tuning;
     readCarParams(this.carParams, tn);
+    this.weather.update(this.ctx.state.weather, tn);
     this.laneWidth = getTuning(tn, 'road.laneWidth');
     this.timeSpeed = getTuning(tn, 'world.timeSpeed');
     this.controls.read(this.carInput, tn, deltaMs / 1000);
@@ -138,8 +144,8 @@ export class DriveScene extends Phaser.Scene {
     lp.beamWidth = getTuning(tn, 'light.beamWidth');
     lp.beamFade = getTuning(tn, 'light.beamFade');
     const hour = this.ctx.state.timeOfDay;
-    updateLighting(this.lighting, hour, this.controls.headlights, lp);
-    this.sky.update(hour, this.projection.horizonY, GAME_WIDTH);
+    updateLighting(this.lighting, hour, this.controls.headlights, lp, this.weather.effects);
+    this.sky.update(hour, this.projection.horizonY, GAME_WIDTH, this.lighting, this.weather.effects.overcast);
     this.roadRenderer.render(this.road, v, ROAD_PALETTE, this.lighting);
     // Тряска на обочине: детерминированные синусы, амплитуда растёт со скоростью
     let shake = 0;
@@ -154,6 +160,7 @@ export class DriveScene extends Phaser.Scene {
     hgt.pole = getTuning(tn, 'roadside.poleHeight');
     hgt.sign = getTuning(tn, 'roadside.signHeight');
     this.roadside.render(this.road, this.roadRenderer.sprites, hgt, this.lighting, GAME_WIDTH, this.projection.centerX, shake);
+    this.weather.render(time, car.speed);
 
     const minute = Math.floor(this.ctx.state.timeOfDay * 60);
     if (minute !== this.shownMinute) {

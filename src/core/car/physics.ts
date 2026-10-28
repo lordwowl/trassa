@@ -26,7 +26,8 @@ export function stepCar(car: CarState, input: CarInput, p: CarParams, road: Road
   // Продольное ускорение: двигатель через КПП, тормоз, сопротивления, уклон
   updateGear(car, input, p, dt);
   let a = engineAccel(car, throttle, p, dt);
-  a -= brake * p.braking;
+  const grip = road.grip > 0.05 ? road.grip : 0.05;
+  a -= brake * p.braking * grip;
   a -= p.drag * v * v;
   a -= p.gravity * G * road.grade;
   if (v > 0) a -= p.rolling;
@@ -42,7 +43,7 @@ export function stepCar(car: CarState, input: CarInput, p: CarParams, road: Road
 
   // Руль и боковое движение
   car.steer = approach(car.steer, clamp(input.steer, -1, 1), p.steerResponse * dt);
-  const lateral = car.steer * p.steerGain * speed - p.centrifugal * speed * speed * road.curve;
+  const lateral = car.steer * p.steerGain * speed * (0.5 + 0.5 * grip) - (p.centrifugal * speed * speed * road.curve) / grip;
   const limit = road.halfWidth + p.offroadLimit;
   car.x = clamp(car.x + lateral * dt, -limit, limit);
   car.offroad = Math.abs(car.x) > road.halfWidth;

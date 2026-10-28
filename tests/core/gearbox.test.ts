@@ -5,7 +5,7 @@ import { createTuning, parseTuningData } from '../../src/core/tuning';
 
 const p = createCarParams(createTuning(parseTuningData(rawTuning)));
 const DT = 1 / 60;
-const flat: RoadContext = { curve: 0, grade: 0, halfWidth: 3.5 };
+const flat: RoadContext = { curve: 0, grade: 0, halfWidth: 3.5, grip: 1 };
 const input = (o: Partial<CarInput> = {}): CarInput => ({ throttle: 0, brake: 0, steer: 0, manual: false, shift: 0, ...o });
 
 function run(seconds: number, inp: CarInput, car = createCarState()) {
