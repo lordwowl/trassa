@@ -9,6 +9,7 @@ import { decorateRoad, focalFromFov, generateRoad, segmentIndexAt, type Projecti
 import { getTuning, type Tuning } from '../../core/tuning';
 import { DriveControls } from '../../input/DriveControls';
 import { Cockpit } from '../cockpit/Cockpit';
+import { Mirrors } from '../cockpit/Mirrors';
 import { advanceClock, formatClock } from '../../core/world';
 import { createLighting, updateLighting, type LightingParams } from '../road/lighting';
 import { ROAD_PALETTE, RoadRenderer, type RoadView } from '../road/RoadRenderer';
@@ -58,6 +59,7 @@ export class DriveScene extends Phaser.Scene {
   private shownMinute = -1;
   private timeSpeed = 30;
   private cockpit!: Cockpit;
+  private mirrors!: Mirrors;
   private controls!: DriveControls;
   private hud!: DriveHud;
   private car: CarState = createCarState();
@@ -100,6 +102,7 @@ export class DriveScene extends Phaser.Scene {
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
     this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'), getTuning(this.ctx.tuning, 'car.redline'));
+    this.mirrors = new Mirrors(this);
     this.hud = new DriveHud(this, this.controls, () => this.scene.start('menu'));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.roadRenderer.destroy();
@@ -161,6 +164,8 @@ export class DriveScene extends Phaser.Scene {
     hgt.sign = getTuning(tn, 'roadside.signHeight');
     this.roadside.render(this.road, this.roadRenderer.sprites, hgt, this.lighting, GAME_WIDTH, this.projection.centerX, shake);
     this.weather.render(time, car.speed);
+    this.mirrors.render(this.road, car.z, car.x, v.cameraHeight, this.laneWidth, getTuning(tn, 'cockpit.mirrorSegments'),
+      ROAD_PALETTE, this.lighting, this.sky.horizonColor);
 
     const minute = Math.floor(this.ctx.state.timeOfDay * 60);
     if (minute !== this.shownMinute) {

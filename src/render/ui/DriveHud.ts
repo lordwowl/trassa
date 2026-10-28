@@ -27,11 +27,12 @@ export class DriveHud {
   constructor(scene: Phaser.Scene, controls: DriveControls, onMenu: () => void) {
     this.controls = controls;
     const top = { height: 72, fontSize: 26, color: GREY };
-    createButton(scene, 106, 52, t('menu'), onMenu, { ...top, width: 180, fontSize: 30 }).setDepth(HUD_DEPTH);
-    this.mode = createButton(scene, 357, 52, '', () => controls.toggleMode(), { ...top, width: 290 }).setDepth(HUD_DEPTH);
-    this.calibrate = createButton(scene, 628, 52, t('calibrate'), () => controls.calibrate(), { ...top, width: 220 }).setDepth(HUD_DEPTH);
-    this.gearbox = createButton(scene, 875, 52, '', () => controls.toggleTransmission(), { ...top, width: 250 }).setDepth(HUD_DEPTH);
-    this.lights = createButton(scene, 1092, 52, '', () => controls.cycleHeadlights(), { ...top, width: 164, fontSize: 22 }).setDepth(HUD_DEPTH);
+    // Верхний ряд обходит центральное зеркало (x 490–790)
+    createButton(scene, 86, 52, t('menu'), onMenu, { ...top, width: 140 }).setDepth(HUD_DEPTH);
+    this.mode = createButton(scene, 316, 52, '', () => controls.toggleMode(), { ...top, width: 300 }).setDepth(HUD_DEPTH);
+    this.calibrate = createButton(scene, 316, 124, t('calibrate'), () => controls.calibrate(), { ...top, height: 56, width: 220, fontSize: 22 }).setDepth(HUD_DEPTH);
+    this.gearbox = createButton(scene, 900, 52, '', () => controls.toggleTransmission(), { ...top, width: 200, fontSize: 22 }).setDepth(HUD_DEPTH);
+    this.lights = createButton(scene, 1090, 52, '', () => controls.cycleHeadlights(), { ...top, width: 160, fontSize: 22 }).setDepth(HUD_DEPTH);
     // Дворники — на панели слева от приборов (GDD 5.1: «на панели — дворники»)
     this.wipers = createButton(scene, 196, 444, '', () => controls.cycleWipers(), { width: 170, height: 52, fontSize: 20, color: 0x2f3742 }).setDepth(HUD_DEPTH);
     // ▲▼ «у рычага» — на центральной консоли (GDD 5.1), под часами

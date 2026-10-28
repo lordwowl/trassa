@@ -14,6 +14,11 @@ export class Sky {
     this.g = scene.add.graphics().setDepth(-1);
   }
 
+  /** Цвет у горизонта — для зеркал. */
+  get horizonColor(): number {
+    return this.colors.bottom;
+  }
+
   update(hour: number, horizonY: number, width: number, light: Lighting, overcast: number): void {
     const c = skyColors(this.colors, hour, light, overcast);
     if (c.top === this.drawnTop && c.bottom === this.drawnBottom && horizonY === this.drawnHorizon) return;
