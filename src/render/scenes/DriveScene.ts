@@ -8,9 +8,13 @@ import { createRng, hashSeed } from '../../core/rng';
 import { focalFromFov, generateRoad, segmentIndexAt, type ProjectionView, type Road } from '../../core/road';
 import { getTuning, type Tuning } from '../../core/tuning';
 import { DriveControls } from '../../input/DriveControls';
+import { Cockpit } from '../cockpit/Cockpit';
 import { DAY_PALETTE, NIGHT_PALETTE, RoadRenderer, type RoadPalette, type RoadView } from '../road/RoadRenderer';
 import { createButton } from '../ui/Button';
 import { t } from '../ui/strings';
+
+/** Кнопки поверх кабины и педалей. */
+const HUD_DEPTH = 60;
 
 /** Трасса по seed и параметрам генерации из tuning.json. */
 export function buildRoad(seed: number, tn: Tuning): Road {
@@ -35,7 +39,7 @@ export class DriveScene extends Phaser.Scene {
   private road!: Road;
   private roadRenderer!: RoadRenderer;
   private palette!: RoadPalette;
-  private speedText!: Phaser.GameObjects.Text;
+  private cockpit!: Cockpit;
   private controls!: DriveControls;
   private modeButton!: Phaser.GameObjects.Container;
   private calibrateButton!: Phaser.GameObjects.Container;
@@ -46,7 +50,6 @@ export class DriveScene extends Phaser.Scene {
   private readonly carInput: CarInput = { throttle: 0, brake: 0, steer: 0 };
   private readonly roadCtx: RoadContext = { curve: 0, grade: 0, halfWidth: 0 };
   private laneWidth = 3.5;
-  private shownKmh = -1;
   private readonly projection: ProjectionView = { focal: 1, centerX: GAME_WIDTH / 2, horizonY: GAME_HEIGHT / 2 };
   private readonly view: RoadView = {
     z: 0,
@@ -69,7 +72,6 @@ export class DriveScene extends Phaser.Scene {
     this.loop = createFixedStep();
     this.car = createCarState();
     this.carParams = createCarParams(this.ctx.tuning);
-    this.shownKmh = -1;
 
     this.road = buildRoad(this.ctx.state.seed, this.ctx.tuning);
     this.palette = paletteFor(this.ctx);
@@ -78,12 +80,11 @@ export class DriveScene extends Phaser.Scene {
     this.roadRenderer = new RoadRenderer(this, maxDraw);
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
-    this.speedText = this.add.text(1000, 52, '', { fontFamily: 'monospace', fontSize: '40px', color: '#ffffff' })
-      .setOrigin(1, 0.5).setShadow(2, 2, '#000000', 4);
+    this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'));
     // Верхний ряд: низ экрана занят педалями и рулём
-    createButton(this, 106, 52, t('menu'), () => this.scene.start('menu'), { width: 180, height: 72, fontSize: 30, color: 0x44515e });
-    this.modeButton = createButton(this, 357, 52, '', () => this.controls.toggleMode(), { width: 290, height: 72, fontSize: 26, color: 0x44515e });
-    this.calibrateButton = createButton(this, 628, 52, t('calibrate'), () => this.controls.calibrate(), { width: 220, height: 72, fontSize: 26, color: 0x44515e });
+    createButton(this, 106, 52, t('menu'), () => this.scene.start('menu'), { width: 180, height: 72, fontSize: 30, color: 0x44515e }).setDepth(HUD_DEPTH);
+    this.modeButton = createButton(this, 357, 52, '', () => this.controls.toggleMode(), { width: 290, height: 72, fontSize: 26, color: 0x44515e }).setDepth(HUD_DEPTH);
+    this.calibrateButton = createButton(this, 628, 52, t('calibrate'), () => this.controls.calibrate(), { width: 220, height: 72, fontSize: 26, color: 0x44515e }).setDepth(HUD_DEPTH);
     this.shownTilt = null;
     this.shownMode = null;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.roadRenderer.destroy());
@@ -120,11 +121,7 @@ export class DriveScene extends Phaser.Scene {
     }
     this.roadRenderer.graphics.y = shake;
 
-    const kmh = Math.round(car.speed * 3.6);
-    if (kmh !== this.shownKmh) {
-      this.shownKmh = kmh;
-      this.speedText.setText(`${kmh} км/ч`);
-    }
+    this.cockpit.update(car.speed * 3.6, car.steer * getTuning(tn, 'cockpit.wheelMaxAngle'));
     const d = this.ctx.debug;
     d.speed = car.speed;
     d.segment = segmentIndexAt(this.road, car.z);
