@@ -71,6 +71,8 @@ export class DriveScene extends Phaser.Scene {
     this.ctx.debug.scene = 'drive';
     this.loop = createFixedStep();
     this.car = createCarState();
+    // Правостороннее движение: старт по центру правой полосы
+    this.car.x = getTuning(this.ctx.tuning, 'road.laneWidth') / 2;
     this.carParams = createCarParams(this.ctx.tuning);
 
     this.road = buildRoad(this.ctx.state.seed, this.ctx.tuning);
@@ -108,7 +110,8 @@ export class DriveScene extends Phaser.Scene {
     this.projection.horizonY = GAME_HEIGHT * getTuning(tn, 'render.horizon');
     const v = this.view;
     v.z = car.z;
-    v.x = car.x;
+    // Камера — на месте водителя (левее центра машины)
+    v.x = car.x + getTuning(tn, 'cockpit.seatOffset');
     v.cameraHeight = getTuning(tn, 'road.cameraHeight');
     v.drawDistance = getTuning(tn, 'render.drawDistance');
     v.laneWidth = this.laneWidth;

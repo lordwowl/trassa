@@ -6,8 +6,9 @@ import { inRect, pedalValue, type Rect } from './controlMath';
 export const LAYOUT = {
   gas: { x: 1110, y: 330, w: 154, h: 374 },
   brake: { x: 934, y: 450, w: 160, h: 254 },
-  left: { x: 16, y: 470, w: 180, h: 234 },
-  right: { x: 212, y: 470, w: 180, h: 234 },
+  // Кнопки руля узкие: правее них — руль водителя (левый руль)
+  left: { x: 16, y: 470, w: 120, h: 234 },
+  right: { x: 146, y: 470, w: 120, h: 234 },
 } satisfies Record<string, Rect>;
 
 /** Запас вокруг зон, px: палец может немного съехать с педали. */
@@ -35,7 +36,7 @@ export class TouchControls {
       scene.add.text(r.x + r.w / 2, r.y + r.h / 2, text, { ...style, fontSize: `${size}px` }).setOrigin(0.5).setDepth(51).setAlpha(0.85);
     center(LAYOUT.gas, labels.gas, 30);
     center(LAYOUT.brake, labels.brake, 26);
-    this.arrows = [center(LAYOUT.left, '◀', 64), center(LAYOUT.right, '▶', 64)];
+    this.arrows = [center(LAYOUT.left, '◀', 56), center(LAYOUT.right, '▶', 56)];
   }
 
   setSteerButtonsVisible(v: boolean): void {
