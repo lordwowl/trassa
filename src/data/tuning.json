@@ -238,6 +238,76 @@
       "max": 0.8,
       "step": 0.05,
       "label": "Место водителя от центра машины, м (влево < 0)"
+    },
+    "roadside.treeDensity": {
+      "value": 6,
+      "min": 0,
+      "max": 20,
+      "step": 0.5,
+      "label": "Деревьев на 100 м с каждой стороны (новая трасса)"
+    },
+    "roadside.treeMinOffset": {
+      "value": 4,
+      "min": 1,
+      "max": 15,
+      "step": 0.5,
+      "label": "Деревья не ближе к дороге, м (новая трасса)"
+    },
+    "roadside.treeMaxOffset": {
+      "value": 30,
+      "min": 5,
+      "max": 80,
+      "step": 1,
+      "label": "Деревья не дальше от дороги, м (новая трасса)"
+    },
+    "roadside.poleSpacing": {
+      "value": 50,
+      "min": 0,
+      "max": 150,
+      "step": 5,
+      "label": "Шаг столбов, м; 0 — без столбов (новая трасса)"
+    },
+    "roadside.poleOffset": {
+      "value": 2.5,
+      "min": 1,
+      "max": 8,
+      "step": 0.5,
+      "label": "Столбы от края дороги, м (новая трасса)"
+    },
+    "roadside.signSpacing": {
+      "value": 800,
+      "min": 0,
+      "max": 3000,
+      "step": 50,
+      "label": "Средний шаг знаков, м; 0 — без знаков (новая трасса)"
+    },
+    "roadside.treeHeight": {
+      "value": 9,
+      "min": 3,
+      "max": 20,
+      "step": 0.5,
+      "label": "Высота ёлок, м"
+    },
+    "roadside.treeRoundHeight": {
+      "value": 7,
+      "min": 3,
+      "max": 20,
+      "step": 0.5,
+      "label": "Высота лиственных деревьев, м"
+    },
+    "roadside.poleHeight": {
+      "value": 8,
+      "min": 3,
+      "max": 15,
+      "step": 0.5,
+      "label": "Высота столбов, м"
+    },
+    "roadside.signHeight": {
+      "value": 2.6,
+      "min": 1,
+      "max": 5,
+      "step": 0.1,
+      "label": "Высота знаков, м"
     }
   }
 }
