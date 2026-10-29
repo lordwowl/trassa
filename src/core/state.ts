@@ -3,7 +3,7 @@
 import { createRng, type RngState } from './rng';
 import type { Weather } from './types';
 
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 
 export interface GameState {
   version: number;
@@ -17,6 +17,8 @@ export interface GameState {
   /** Время суток, часы [0, 24). */
   timeOfDay: number;
   weather: Weather;
+  /** Повреждения машины, % (0..100). */
+  damage: number;
 }
 
 export interface NewGameOptions {
@@ -26,6 +28,7 @@ export interface NewGameOptions {
   fuel?: number | null;
   timeOfDay?: number | null;
   weather?: Weather | null;
+  damage?: number | null;
 }
 
 // Временные стартовые значения M0; в M4–M5 переедут в tuning.json/cars.json.
@@ -44,5 +47,6 @@ export function createGameState(o: NewGameOptions): GameState {
     fuel: o.fuel ?? DEFAULT_FUEL,
     timeOfDay: o.timeOfDay ?? DEFAULT_TIME,
     weather: o.weather ?? 'clear',
+    damage: Math.min(100, Math.max(0, o.damage ?? 0)),
   };
 }

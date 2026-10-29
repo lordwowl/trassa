@@ -22,6 +22,8 @@ export interface TrafficCar {
   cruise: number;
   length: number;
   width: number;
+  /** После удара стоит столько секунд, потом снова едет, с. */
+  stun: number;
 }
 
 export interface TrafficState {

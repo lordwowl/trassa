@@ -11,7 +11,7 @@ import { createRng, hashSeed } from '../../core/rng';
 import { createCurveAhead, decorateRoad, findCurveAhead, focalFromFov, generateRoad, segmentIndexAt, type ProjectionView, type Road } from '../../core/road';
 import { getTuning, type Tuning } from '../../core/tuning';
 import { Sfx } from '../../audio/Sfx';
-import { createTraffic, kindWeights, parseTrafficKinds, populateTraffic, stepTraffic, type TrafficKind, type TrafficParams, type TrafficPlayer, type TrafficState } from '../../core/traffic';
+import { collideTraffic, createCollisionResult, createTraffic, kindWeights, parseTrafficKinds, populateTraffic, stepTraffic, type CollisionParams, type TrafficKind, type TrafficParams, type TrafficPlayer, type TrafficState } from '../../core/traffic';
 import trafficData from '../../data/traffic.json';
 import { DriveControls } from '../../input/DriveControls';
 import { Cockpit } from '../cockpit/Cockpit';
@@ -25,6 +25,8 @@ import { RoadsideSprites, type KindHeights } from '../road/RoadsideSprites';
 import { TrafficSprites } from '../road/TrafficSprites';
 import type { MirrorTraffic } from '../cockpit/MirrorView';
 import { DriveHud } from '../ui/DriveHud';
+import { DriveImpact } from './DriveImpact';
+import { readTrafficParams } from './driveParams';
 import { DriveWeather } from './DriveWeather';
 import { t } from '../ui/strings';
 
@@ -95,6 +97,9 @@ export class DriveScene extends Phaser.Scene {
   };
   private readonly trafficPlayer: TrafficPlayer = { z: 0, x: 0, speed: 0, length: PLAYER_LENGTH };
   private mirrorTraffic!: MirrorTraffic;
+  private readonly collision = createCollisionResult();
+  private readonly collisionParams: CollisionParams = { front: 1.6, rear: 2.7, width: 1.75, damagePerImpact: 1.8, damageSide: 2, stunTime: 3 };
+  private impact!: DriveImpact;
   private laneWidth = 3.5;
   private readonly projection: ProjectionView = { focal: 1, centerX: GAME_WIDTH / 2, horizonY: GAME_HEIGHT / 2 };
   private readonly view: RoadView = {
@@ -119,6 +124,7 @@ export class DriveScene extends Phaser.Scene {
     this.car = createCarState();
     // Правостороннее движение: старт по центру правой полосы
     this.car.x = getTuning(this.ctx.tuning, 'road.laneWidth') / 2;
+    this.car.damage = this.ctx.state.damage;
     this.carParams = createCarParams(this.ctx.tuning);
 
     this.road = buildRoad(this.ctx.state.seed, this.ctx.tuning);
@@ -130,9 +136,10 @@ export class DriveScene extends Phaser.Scene {
     this.roadside = new RoadsideSprites(this, SPRITE_POOL);
     this.trafficSprites = new TrafficSprites(this, TRAFFIC_POOL, TRAFFIC_KINDS);
     this.traffic = createTraffic(TRAFFIC_POOL, hashSeed(`traffic:${this.ctx.state.seed}`));
-    this.readTrafficParams(this.ctx.tuning);
+    readTrafficParams(this.trafficParams, this.collisionParams, this.ctx.tuning);
     populateTraffic(this.traffic, TRAFFIC_KINDS, TRAFFIC_WEIGHTS, this.trafficParams, this.road, this.car.z);
     this.mirrorTraffic = { state: this.traffic, kinds: TRAFFIC_KINDS, lightsOn: 0 };
+    this.impact = new DriveImpact(this, this.ctx.state.seed, this.car.damage);
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
     this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'), getTuning(this.ctx.tuning, 'car.redline'),
@@ -166,6 +173,7 @@ export class DriveScene extends Phaser.Scene {
     pl.x = this.car.x;
     pl.speed = this.car.speed;
     stepTraffic(this.traffic, TRAFFIC_KINDS, TRAFFIC_WEIGHTS, this.trafficParams, this.road, pl, dt);
+    this.impact.hit(collideTraffic(this.collision, this.traffic, TRAFFIC_KINDS, this.car, this.collisionParams, dt), this.car, this.ctx.state);
     this.weather.step(dt, this.car.speed, this.controls.wipers);
     const st = this.ctx.state;
     st.timeOfDay = advanceClock(st.timeOfDay, dt, this.timeSpeed);
@@ -176,7 +184,7 @@ export class DriveScene extends Phaser.Scene {
     readCarParams(this.carParams, tn);
     this.weather.update(this.ctx.state.weather, tn);
     this.laneWidth = getTuning(tn, 'road.laneWidth');
-    this.readTrafficParams(tn);
+    readTrafficParams(this.trafficParams, this.collisionParams, tn);
     this.timeSpeed = getTuning(tn, 'world.timeSpeed');
     this.controls.read(this.carInput, tn, deltaMs / 1000);
     this.hud.update();
@@ -243,7 +251,7 @@ export class DriveScene extends Phaser.Scene {
     ls.low = this.controls.headlights === 1;
     ls.high = this.controls.headlights === 2;
     ls.fuel = st.fuel <= tank * getTuning(tn, 'car.fuelLampAt');
-    ls.damage = false; // повреждения — M3
+    ls.damage = this.impact.update(time, this.sfx, car.damage);
     this.cockpit.lamps.update(ls);
     this.cockpit.lamps.setFuel(st.fuel / tank);
     findCurveAhead(this.curveAhead, this.road, car.z, getTuning(tn, 'nav.lookahead'), getTuning(tn, 'nav.curveMin'));
@@ -254,20 +262,6 @@ export class DriveScene extends Phaser.Scene {
     d.x = car.x;
     d.rpm = car.rpm;
     d.gear = car.gear;
-  }
-
-  private readTrafficParams(tn: Tuning): void {
-    const p = this.trafficParams;
-    p.density = getTuning(tn, 'traffic.density');
-    p.oncomingDensity = getTuning(tn, 'traffic.oncomingDensity');
-    p.speedScale = getTuning(tn, 'traffic.speedScale');
-    p.headway = getTuning(tn, 'traffic.headway');
-    p.minGap = getTuning(tn, 'traffic.minGap');
-    p.accel = getTuning(tn, 'traffic.accel');
-    p.brake = getTuning(tn, 'traffic.brake');
-    p.spawnAhead = getTuning(tn, 'traffic.spawnAhead');
-    p.despawnBehind = getTuning(tn, 'traffic.despawnBehind');
-    p.laneWidth = getTuning(tn, 'road.laneWidth');
   }
 
   /** Мигание ламп поворотников, щелчки реле, гудок. */

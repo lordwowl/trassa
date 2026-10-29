@@ -18,8 +18,14 @@ function approach(value: number, target: number, step: number): number {
   return Math.max(target, value - step);
 }
 
+/** Повреждения, с которых машину уводит в сторону и с которых падает макс. скорость, %. */
+export const DAMAGE_PULL_FROM = 30;
+export const DAMAGE_SLOW_FROM = 60;
+
 export function stepCar(car: CarState, input: CarInput, p: CarParams, road: RoadContext, dt: number): void {
-  const throttle = clamp(input.throttle, 0, 1);
+  // При 100% повреждений двигатель не тянет — машина встаёт
+  const dead = car.damage >= 100;
+  const throttle = dead ? 0 : clamp(input.throttle, 0, 1);
   const brake = clamp(input.brake, 0, 1);
   const v = car.speed;
 
@@ -36,14 +42,18 @@ export function stepCar(car: CarState, input: CarInput, p: CarParams, road: Road
   let speed = v + a * dt;
   // Сопротивления и тормоз не разгоняют машину назад
   if (speed < 0) speed = 0;
-  const vmax = gearTopSpeed(p, p.gearCount);
-  if (speed > vmax) speed = vmax;
+  let vmax = gearTopSpeed(p, p.gearCount);
+  if (car.damage > DAMAGE_SLOW_FROM) vmax *= 1 - (p.damageSpeedLoss * (car.damage - DAMAGE_SLOW_FROM)) / (100 - DAMAGE_SLOW_FROM);
+  // Выше предела (после повреждения) — плавно сбрасываем, а не обрезаем скачком
+  if (speed > vmax) speed = Math.max(vmax, v - p.braking * 0.3 * dt);
   car.speed = speed;
   car.z += speed * dt;
 
   // Руль и боковое движение
   car.steer = approach(car.steer, clamp(input.steer, -1, 1), p.steerResponse * dt);
-  const lateral = car.steer * p.steerGain * speed * (0.5 + 0.5 * grip) - (p.centrifugal * speed * speed * road.curve) / grip;
+  // Повреждённую машину уводит вправо, как при сбитом сходе-развале
+  const pull = car.damage > DAMAGE_PULL_FROM ? (p.damagePull * (car.damage - DAMAGE_PULL_FROM)) / (100 - DAMAGE_PULL_FROM) : 0;
+  const lateral = (car.steer + pull) * p.steerGain * speed * (0.5 + 0.5 * grip) - (p.centrifugal * speed * speed * road.curve) / grip;
   const limit = road.halfWidth + p.offroadLimit;
   car.x = clamp(car.x + lateral * dt, -limit, limit);
   car.offroad = Math.abs(car.x) > road.halfWidth;
@@ -73,6 +83,8 @@ export function readCarParams(out: CarParams, t: Tuning): CarParams {
   out.offroadDecel = getTuning(t, 'car.offroadDecel');
   out.offroadMaxSpeed = getTuning(t, 'car.offroadMaxSpeed');
   out.offroadLimit = getTuning(t, 'car.offroadLimit');
+  out.damagePull = getTuning(t, 'car.damagePull');
+  out.damageSpeedLoss = getTuning(t, 'car.damageSpeedLoss');
   return out;
 }
 

@@ -26,6 +26,7 @@ setContext({
     carId: config.car,
     money: config.money,
     fuel: config.fuel,
+    damage: config.damage,
     timeOfDay: config.time,
     weather: config.weather,
   }),

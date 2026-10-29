@@ -40,7 +40,7 @@ export class DebugScene extends Phaser.Scene {
       `v ${(d.speed * 3.6).toFixed(0)} км/ч  rpm ${d.rpm.toFixed(0)}  gear ${d.gear}`,
       `seg ${d.segment}  x ${d.x.toFixed(2)}`,
       `weather ${s.weather}  time ${fmtTime(s.timeOfDay)}`,
-      `car ${s.carId}  money ${s.money}  fuel ${s.fuel.toFixed(1)} л`,
+      `car ${s.carId}  money ${s.money}  fuel ${s.fuel.toFixed(1)} л  damage ${s.damage.toFixed(0)}%`,
     ];
     for (const w of c.warnings) lines.push(`! ${w}`);
     this.text.setText(lines);

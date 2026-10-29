@@ -19,6 +19,8 @@ export interface LaunchConfig {
   car: string | null;
   money: number | null;
   fuel: number | null;
+  /** Повреждения машины, % (0..100). */
+  damage: number | null;
   /** Предупреждения о неверных параметрах — показываются в debug-оверлее. */
   warnings: string[];
 }
@@ -75,7 +77,13 @@ export function parseLaunchConfig(search: string): LaunchConfig {
     fuel = null;
   }
 
-  return { debug, scene, seed, weather, time, car, money, fuel, warnings };
+  let damage = parseNumber(p.get('damage'), 'damage', warnings);
+  if (damage !== null && (damage < 0 || damage > 100)) {
+    warnings.push(`damage: вне диапазона 0–100 «${damage}»`);
+    damage = null;
+  }
+
+  return { debug, scene, seed, weather, time, car, money, fuel, damage, warnings };
 }
 
 let cached: LaunchConfig | null = null;

@@ -13,7 +13,10 @@ export interface KeyValueStorage {
 export const SAVE_KEY = 'trassa.save';
 
 /** Миграции: ключ — версия, из которой мигрируем. Каждая поднимает версию на 1. */
-const MIGRATIONS: Record<number, (s: Record<string, unknown>) => Record<string, unknown>> = {};
+const MIGRATIONS: Record<number, (s: Record<string, unknown>) => Record<string, unknown>> = {
+  // v2: повреждения машины (M3.2)
+  1: (s) => ({ ...s, version: 2, damage: 0 }),
+};
 
 export function migrate(raw: Record<string, unknown>): Record<string, unknown> {
   let s = raw;
@@ -37,6 +40,7 @@ export function isGameState(v: unknown): v is GameState {
     Number.isInteger(s.money) &&
     typeof s.fuel === 'number' &&
     typeof s.timeOfDay === 'number' &&
+    typeof s.damage === 'number' &&
     isWeather(s.weather)
   );
 }

@@ -19,6 +19,8 @@ export interface CarState {
   shiftTimer: number;
   /** Накопленное время выше красной зоны, с (износ — M3/M4). */
   overRevTime: number;
+  /** Повреждения, % (0..100); копия GameState.damage на время рейса. */
+  damage: number;
 }
 
 /** Управление на текущий шаг. */
@@ -76,6 +78,10 @@ export interface CarParams {
   offroadMaxSpeed: number;
   /** Как далеко за край полотна можно уехать, м. */
   offroadLimit: number;
+  /** Увод вправо при 100% повреждений — доля полного руля (от 30% растёт линейно). */
+  damagePull: number;
+  /** Потеря макс. скорости при 100% повреждений, доля (от 60% растёт линейно). */
+  damageSpeedLoss: number;
 }
 
 /** Дорога в точке машины. */
@@ -91,5 +97,5 @@ export interface RoadContext {
 }
 
 export function createCarState(): CarState {
-  return { z: 0, x: 0, speed: 0, steer: 0, offroad: false, gear: 1, rpm: 0, shiftTimer: 0, overRevTime: 0 };
+  return { z: 0, x: 0, speed: 0, steer: 0, offroad: false, gear: 1, rpm: 0, shiftTimer: 0, overRevTime: 0, damage: 0 };
 }

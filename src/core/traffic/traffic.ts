@@ -22,7 +22,7 @@ const PAINTS = 8;
 export function createTraffic(poolSize: number, seed: number): TrafficState {
   const cars: TrafficCar[] = [];
   for (let i = 0; i < poolSize; i++) {
-    cars.push({ active: false, kind: 0, paint: 0, dir: 1, lane: 0, z: 0, x: 0, speed: 0, cruise: 0, length: 4, width: 1.8 });
+    cars.push({ active: false, kind: 0, paint: 0, dir: 1, lane: 0, z: 0, x: 0, speed: 0, cruise: 0, length: 4, width: 1.8, stun: 0 });
   }
   return { cars, rng: createRng(seed), spawnTimer: [0, 0] };
 }
@@ -84,6 +84,7 @@ function spawn(t: TrafficState, kinds: readonly TrafficKind[], weights: readonly
   slot.speed = slot.cruise;
   slot.length = k.length;
   slot.width = k.width;
+  slot.stun = 0;
   return true;
 }
 
@@ -150,6 +151,11 @@ export function stepTraffic(t: TrafficState, kinds: readonly TrafficKind[], weig
       acc -= q * q;
     }
     acc *= p.accel;
+    // После удара машина тормозит до остановки и стоит
+    if (c.stun > 0) {
+      c.stun -= dt;
+      acc = -p.brake * 2;
+    }
     if (acc < -MAX_DECEL) acc = -MAX_DECEL;
     c.speed = Math.max(0, v + acc * dt);
     c.z += c.dir * c.speed * dt;
