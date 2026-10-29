@@ -735,6 +735,69 @@
       "max": 1,
       "step": 0.05,
       "label": "Ошибка встречного под дальним светом (в секунду)"
+    },
+    "accident.headonImpact": {
+      "value": 18,
+      "min": 8,
+      "max": 40,
+      "step": 1,
+      "label": "Авария: лобовое от скорости сближения, м/с"
+    },
+    "accident.costBase": {
+      "value": 150,
+      "min": 0,
+      "max": 2000,
+      "step": 10,
+      "label": "Авария: оформление и ремонт на месте, кр."
+    },
+    "accident.costPerImpact": {
+      "value": 10,
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "label": "Авария: надбавка за 1 м/с удара, кр."
+    },
+    "accident.timeLoss": {
+      "value": 1.5,
+      "min": 0,
+      "max": 6,
+      "step": 0.25,
+      "label": "Авария: потеря времени, ч"
+    },
+    "accident.towBase": {
+      "value": 300,
+      "min": 0,
+      "max": 2000,
+      "step": 10,
+      "label": "Эвакуатор: вызов, кр."
+    },
+    "accident.towPerKm": {
+      "value": 15,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "label": "Эвакуатор: цена за км, кр."
+    },
+    "accident.towDistance": {
+      "value": 25,
+      "min": 5,
+      "max": 150,
+      "step": 5,
+      "label": "Эвакуатор: до ближайшего города, км (пока условно)"
+    },
+    "accident.towSpeed": {
+      "value": 40,
+      "min": 20,
+      "max": 80,
+      "step": 5,
+      "label": "Эвакуатор: средняя скорость, км/ч"
+    },
+    "accident.towRepairTo": {
+      "value": 60,
+      "min": 0,
+      "max": 95,
+      "step": 5,
+      "label": "Повреждения после аварийного ремонта, %"
     }
   }
 }

@@ -169,6 +169,14 @@ export function stepTraffic(t: TrafficState, kinds: readonly TrafficKind[], weig
   }
 }
 
+/** Убрать машины ближе dist (м) к точке z — после аварии, чтобы рейс продолжился с чистой дороги. */
+export function clearTrafficNear(t: TrafficState, z: number, dist: number): void {
+  for (let i = 0; i < t.cars.length; i++) {
+    const c = t.cars[i] as TrafficCar;
+    if (c.active && Math.abs(c.z - z) < dist) c.active = false;
+  }
+}
+
 /** Доли видов для weightedIndex — собрать один раз. */
 export function kindWeights(kinds: readonly TrafficKind[]): number[] {
   return kinds.map((k) => k.weight);
