@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { beamAt, createLighting, lerpColor, shade, skyColors, updateLighting } from '../../src/render/road/lighting';
+import { beamAt, createLighting, lerpColor, shade, skyColors, updateLighting, vehicleLightsOn } from '../../src/render/road/lighting';
 
 const params = { nightAmbient: 0.1, lowRange: 45, highRange: 110, beamIntensity: 0.85, beamWidth: 4, beamFade: 3 };
 
@@ -48,5 +48,18 @@ describe('освещение', () => {
     const dusk = skyColors({ top: 0, bottom: 0 }, 19.25);
     // на закате горизонт тёплый: красного больше, чем синего
     expect((dusk.bottom >> 16) & 0xff).toBeGreaterThan(dusk.bottom & 0xff);
+  });
+});
+
+describe('vehicleLightsOn', () => {
+  it('днём выключены, ночью и в тумане горят', () => {
+    const l = createLighting();
+    const p = { nightAmbient: 0.1, lowRange: 45, highRange: 110, beamIntensity: 0.85, beamWidth: 4, beamFade: 3 };
+    updateLighting(l, 13, 0, p);
+    expect(vehicleLightsOn(l)).toBe(0);
+    updateLighting(l, 23, 0, p);
+    expect(vehicleLightsOn(l)).toBe(1);
+    updateLighting(l, 13, 0, p, { rain: 0, visibility: 70, overcast: 0.6, grip: 0.95 });
+    expect(vehicleLightsOn(l)).toBe(1);
   });
 });
