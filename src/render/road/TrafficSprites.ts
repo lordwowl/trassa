@@ -1,6 +1,6 @@
 // Машины трафика на дороге: пул картинок кузова и свечения фонарей, без аллокаций в кадре.
 // Попутные видны сзади, встречные — спереди. Освещение и дымка — как у придорожных объектов;
-// в темноте и тумане горят задние (красные) и передние (жёлтые) фонари.
+// в темноте и тумане горят задние (красные) и передние (жёлтые) фонари; мигают поворотники, встречные моргают фарами.
 import Phaser from 'phaser';
 import type { TrafficCar, TrafficKind, TrafficState } from '../../core/traffic';
 import { fogAmount } from '../../core/world';
@@ -17,10 +17,15 @@ const LIGHT_HEIGHT: Record<string, readonly [number, number]> = {
 };
 const TAIL_TINT = 0xff3020;
 const HEAD_TINT = 0xfff0b0;
+const SIGNAL_TINT = 0xffa020;
+/** Период мигания поворотника и моргания фарами, мс. */
+const BLINK_MS = 800;
+const FLASH_MS = 300;
 
 export class TrafficSprites {
   private readonly bodies: Phaser.GameObjects.Image[] = [];
   private readonly glows: Phaser.GameObjects.Image[] = [];
+  private readonly signals: Phaser.GameObjects.Image[] = [];
   private readonly shownKey: string[] = [];
   /** Ключи текстур [вид][0 — сзади, 1 — спереди][цвет] — без сборки строк в кадре. */
   private readonly keys: string[][][];
@@ -34,15 +39,18 @@ export class TrafficSprites {
     for (let i = 0; i < size; i++) {
       this.bodies.push(scene.add.image(0, 0, first).setOrigin(0.5, 1).setVisible(false));
       this.glows.push(scene.add.image(0, 0, 'lights_glow').setBlendMode(Phaser.BlendModes.ADD).setVisible(false));
+      this.signals.push(scene.add.image(0, 0, 'blob_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(SIGNAL_TINT).setVisible(false));
       this.shownKey.push(first);
     }
   }
 
   /**
-   * playerZ — позиция камеры вдоль трассы; lightsOn — сила свечения фонарей 0..1 (ночь, туман).
+   * playerZ — позиция камеры вдоль трассы; lightsOn — сила свечения фонарей 0..1 (ночь, туман); time — мс.
    */
   render(t: TrafficState, kinds: readonly TrafficKind[], playerZ: number, road: RoadRenderer, lit: Lighting,
-    lightsOn: number, screenW: number, centerX: number, yOffset: number): void {
+    lightsOn: number, screenW: number, centerX: number, yOffset: number, time: number): void {
+    const blinkOn = time % BLINK_MS < BLINK_MS / 2;
+    const flashOn = time % FLASH_MS < FLASH_MS / 2;
     let used = 0;
     const cars = t.cars;
     const pt = this.pt;
@@ -76,17 +84,30 @@ export class TrafficSprites {
       img.setDepth(depth);
       img.setVisible(true);
 
-      // Фонари: видны сквозь дымку дальше, чем кузов
+      // Фонари: видны сквозь дымку дальше, чем кузов; встречный моргает фарами и днём
       const glow = this.glows[used] as Phaser.GameObjects.Image;
       const ly = pt.y - h * (this.lightY[c.kind]![view] as number);
-      if (lightsOn > 0.02 && ly < pt.clip) {
+      const flash = view === 1 && c.flashTime > 0 && flashOn;
+      const on = flash ? 1 : lightsOn;
+      if (on > 0.02 && ly < pt.clip) {
+        const k = flash ? 1.6 : 1;
         glow.setTint(view === 0 ? TAIL_TINT : HEAD_TINT);
-        glow.setDisplaySize(w * 1.15, Math.max(3, h * (view === 0 ? 0.22 : 0.3)));
+        glow.setDisplaySize(w * 1.15 * k, Math.max(3, h * (view === 0 ? 0.22 : 0.3) * k));
         glow.setPosition(pt.x, ly + yOffset);
-        glow.setAlpha(lightsOn * (1 - fog * 0.6) * (view === 0 ? 0.9 : 1));
+        glow.setAlpha(on * (1 - fog * 0.6) * (view === 0 ? 0.9 : 1));
         glow.setDepth(depth + 1e-6);
         glow.setVisible(true);
       } else if (glow.visible) glow.setVisible(false);
+      // Поворотник: сторона водителя этой машины; у встречной (вид спереди) его левая сторона — справа на экране
+      const sig = this.signals[used] as Phaser.GameObjects.Image;
+      if (c.signal !== 0 && blinkOn && ly < pt.clip) {
+        const s = Math.max(3, h * 0.28);
+        sig.setDisplaySize(s, s);
+        sig.setPosition(pt.x + c.signal * c.dir * w * 0.46, ly + yOffset);
+        sig.setAlpha(1 - fog * 0.5);
+        sig.setDepth(depth + 2e-6);
+        sig.setVisible(true);
+      } else if (sig.visible) sig.setVisible(false);
       used++;
     }
     for (let i = used; i < this.bodies.length; i++) {
@@ -94,11 +115,14 @@ export class TrafficSprites {
       if (b.visible) b.setVisible(false);
       const g = this.glows[i] as Phaser.GameObjects.Image;
       if (g.visible) g.setVisible(false);
+      const s = this.signals[i] as Phaser.GameObjects.Image;
+      if (s.visible) s.setVisible(false);
     }
   }
 
   destroy(): void {
     for (const img of this.bodies) img.destroy();
     for (const img of this.glows) img.destroy();
+    for (const img of this.signals) img.destroy();
   }
 }

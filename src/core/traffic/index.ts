@@ -2,4 +2,5 @@
 export * from './kinds';
 export * from './types';
 export * from './traffic';
+export { findLeader, laneCenter } from './ai';
 export * from './collision';

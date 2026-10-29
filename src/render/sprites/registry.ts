@@ -3,7 +3,7 @@
 import Phaser from 'phaser';
 import trafficData from '../../data/traffic.json';
 import { carRear, hitchhiker, pole, signSpeed, tree, treeRound, type ProceduralDraw } from './procedural';
-import { lightsGlow, vehicleTextures } from './procedural/vehicles';
+import { blobGlow, lightsGlow, vehicleTextures } from './procedural/vehicles';
 
 export interface TextureEntry {
   /** Путь относительно корня сайта, например 'assets/cars/rear_red.png'. */
@@ -19,6 +19,7 @@ export const TEXTURES = {
   sign_speed: { procedural: signSpeed },
   hitchhiker: { procedural: hitchhiker },
   lights_glow: { procedural: lightsGlow },
+  blob_glow: { procedural: blobGlow },
 } satisfies Record<string, TextureEntry>;
 
 export type TextureKey = keyof typeof TEXTURES;

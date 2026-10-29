@@ -1,10 +1,11 @@
 // Попутный и встречный трафик: появление в окне вокруг игрока, исчезновение позади,
-// следование за впереди идущим по модели IDM (тормозит перед медленным, держит интервал).
+// следование за впереди идущим по модели IDM (тормозит перед медленным, держит интервал); обгоны и реакции — ai.ts.
 // Случайность — отдельный поток RNG; пул фиксированного размера, без аллокаций в шаге.
 
 import { createRng, next, range, weightedIndex } from '../rng';
 import type { Road, RoadSegment } from '../road';
 import type { TrafficKind } from './kinds';
+import { findLeader, laneCenter, moveLateral, updateAi } from './ai';
 import type { TrafficCar, TrafficParams, TrafficPlayer, TrafficState } from './types';
 
 /** Не ставить новую машину ближе этого к другой в той же полосе, м. */
@@ -22,7 +23,8 @@ const PAINTS = 8;
 export function createTraffic(poolSize: number, seed: number): TrafficState {
   const cars: TrafficCar[] = [];
   for (let i = 0; i < poolSize; i++) {
-    cars.push({ active: false, kind: 0, paint: 0, dir: 1, lane: 0, z: 0, x: 0, speed: 0, cruise: 0, length: 4, width: 1.8, stun: 0 });
+    cars.push({ active: false, kind: 0, paint: 0, dir: 1, lane: 0, z: 0, x: 0, speed: 0, cruise: 0, length: 4, width: 1.8, stun: 0,
+      phase: 0, phaseTime: 0, target: -1, signal: 0, yieldTime: 0, evadeTime: 0, wobbleTime: 0, flashTime: 0, flashed: false });
   }
   return { cars, rng: createRng(seed), spawnTimer: [0, 0] };
 }
@@ -35,9 +37,10 @@ function lanesPerDir(road: Road, z: number): number {
   return lanes >= 2 ? Math.floor(lanes / 2) : 1;
 }
 
-/** Центр полосы: попутные справа от оси, встречные слева. */
-export function laneCenter(dir: number, lane: number, laneWidth: number): number {
-  return dir * (lane + 0.5) * laneWidth;
+function halfRoadAt(road: Road, z: number, laneWidth: number): number {
+  const n = road.segments.length;
+  const i = Math.floor((((z % road.length) + road.length) % road.length) / road.segmentLength) % n;
+  return ((road.segments[i] as RoadSegment).lanes * laneWidth) / 2;
 }
 
 function countInWindow(t: TrafficState, dir: number): number {
@@ -85,6 +88,15 @@ function spawn(t: TrafficState, kinds: readonly TrafficKind[], weights: readonly
   slot.length = k.length;
   slot.width = k.width;
   slot.stun = 0;
+  slot.phase = 0;
+  slot.phaseTime = 0;
+  slot.target = -1;
+  slot.signal = 0;
+  slot.yieldTime = 0;
+  slot.evadeTime = 0;
+  slot.wobbleTime = 0;
+  slot.flashTime = 0;
+  slot.flashed = false;
   return true;
 }
 
@@ -116,34 +128,15 @@ export function stepTraffic(t: TrafficState, kinds: readonly TrafficKind[], weig
   for (let i = 0; i < cars.length; i++) {
     const c = cars[i] as TrafficCar;
     if (!c.active) continue;
-    // Ближайший впереди в своей полосе (по ходу своего движения)
-    let gap = Infinity;
-    let leaderSpeed = 0;
-    for (let j = 0; j < cars.length; j++) {
-      const o = cars[j] as TrafficCar;
-      if (j === i || !o.active || o.dir !== c.dir || o.lane !== c.lane) continue;
-      const ahead = (o.z - c.z) * c.dir;
-      if (ahead <= 0) continue;
-      const g = ahead - (o.length + c.length) / 2;
-      if (g < gap) {
-        gap = g;
-        leaderSpeed = o.speed;
-      }
-    }
-    // Игрок в той же полосе впереди попутной машины
-    if (c.dir > 0 && Math.abs(player.x - c.x) < p.laneWidth * 0.8) {
-      const ahead = player.z - c.z;
-      if (ahead > 0) {
-        const g = ahead - (player.length + c.length) / 2;
-        if (g < gap) {
-          gap = g;
-          leaderSpeed = player.speed;
-        }
-      }
-    }
+    // Впереди идущий по ширине (в т.ч. встречный в своей полосе) и решения ИИ: обгон, реакции на игрока
+    const l = findLeader(t, i, player);
+    const ai = updateAi(t, i, l, p, player, t.rng, dt);
+    const gap = l.gap;
+    const leaderSpeed = l.speed;
+    const cruise = c.cruise * ai.speedFactor;
     // IDM: свободный разгон до cruise и торможение по интервалу до впереди идущего
     const v = c.speed;
-    const r = v / c.cruise;
+    const r = v / cruise;
     let acc = 1 - r * r * r * r;
     if (gap < Infinity) {
       const s = p.minGap + Math.max(0, v * p.headway + (v * (v - leaderSpeed)) / sqrtAB);
@@ -156,9 +149,11 @@ export function stepTraffic(t: TrafficState, kinds: readonly TrafficKind[], weig
       c.stun -= dt;
       acc = -p.brake * 2;
     }
-    if (acc < -MAX_DECEL) acc = -MAX_DECEL;
+    const maxDecel = ai.maxDecel < MAX_DECEL ? ai.maxDecel : MAX_DECEL;
+    if (acc < -maxDecel) acc = -maxDecel;
     c.speed = Math.max(0, v + acc * dt);
     c.z += c.dir * c.speed * dt;
+    moveLateral(c, ai.targetX, p, halfRoadAt(road, c.z, p.laneWidth), dt);
     const rel = c.z - player.z;
     if (rel > p.spawnAhead + AHEAD_MARGIN || rel < -p.despawnBehind) c.active = false;
   }

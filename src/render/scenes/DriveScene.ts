@@ -94,8 +94,9 @@ export class DriveScene extends Phaser.Scene {
   private readonly trafficParams: TrafficParams = {
     density: 2.5, oncomingDensity: 2, spawnAhead: 1200, despawnBehind: 300,
     headway: 1.3, minGap: 4, accel: 1.5, brake: 3, speedScale: 1, laneWidth: 3.5,
+    overtakeChance: 0.3, overtakeBoost: 1.2, signalLead: 1.2, laneChangeSpeed: 1.6, glareChance: 0.15,
   };
-  private readonly trafficPlayer: TrafficPlayer = { z: 0, x: 0, speed: 0, length: PLAYER_LENGTH };
+  private readonly trafficPlayer: TrafficPlayer = { z: 0, x: 0, speed: 0, length: PLAYER_LENGTH, width: 1.75, glare: false, horn: false };
   private mirrorTraffic!: MirrorTraffic;
   private readonly collision = createCollisionResult();
   private readonly collisionParams: CollisionParams = { front: 1.6, rear: 2.7, width: 1.75, damagePerImpact: 1.8, damageSide: 2, stunTime: 3 };
@@ -138,7 +139,7 @@ export class DriveScene extends Phaser.Scene {
     this.traffic = createTraffic(TRAFFIC_POOL, hashSeed(`traffic:${this.ctx.state.seed}`));
     readTrafficParams(this.trafficParams, this.collisionParams, this.ctx.tuning);
     populateTraffic(this.traffic, TRAFFIC_KINDS, TRAFFIC_WEIGHTS, this.trafficParams, this.road, this.car.z);
-    this.mirrorTraffic = { state: this.traffic, kinds: TRAFFIC_KINDS, lightsOn: 0 };
+    this.mirrorTraffic = { state: this.traffic, kinds: TRAFFIC_KINDS, lightsOn: 0, blinkOn: false };
     this.impact = new DriveImpact(this, this.ctx.state.seed, this.car.damage);
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
@@ -172,6 +173,10 @@ export class DriveScene extends Phaser.Scene {
     pl.z = this.car.z;
     pl.x = this.car.x;
     pl.speed = this.car.speed;
+    pl.width = this.collisionParams.width;
+    pl.horn = this.controls.horn;
+    // Дальний свет слепит встречных только в темноте
+    pl.glare = this.controls.headlights === 2 && this.mirrorTraffic.lightsOn > 0.5;
     stepTraffic(this.traffic, TRAFFIC_KINDS, TRAFFIC_WEIGHTS, this.trafficParams, this.road, pl, dt);
     this.impact.hit(collideTraffic(this.collision, this.traffic, TRAFFIC_KINDS, this.car, this.collisionParams, dt), this.car, this.ctx.state);
     this.weather.step(dt, this.car.speed, this.controls.wipers);
@@ -233,8 +238,9 @@ export class DriveScene extends Phaser.Scene {
     this.roadside.render(this.road, this.roadRenderer.sprites, hgt, this.lighting, GAME_WIDTH, this.projection.centerX, shake);
     const lightsOn = vehicleLightsOn(this.lighting);
     this.trafficSprites.render(this.traffic, TRAFFIC_KINDS, car.z, this.roadRenderer, this.lighting, lightsOn, GAME_WIDTH,
-      this.projection.centerX, shake);
+      this.projection.centerX, shake, time);
     this.mirrorTraffic.lightsOn = lightsOn;
+    this.mirrorTraffic.blinkOn = time % 800 < 400;
     this.weather.render(time, car.speed);
     this.mirrors.render(this.road, car.z, car.x, v.cameraHeight, this.laneWidth, getTuning(tn, 'cockpit.mirrorSegments'),
       ROAD_PALETTE, this.lighting, this.sky.horizonColor, this.mirrorTraffic);

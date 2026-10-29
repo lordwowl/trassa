@@ -123,6 +123,12 @@ export function vehicleTextures(kinds: readonly string[]): Record<string, Proced
   return out;
 }
 
+/** Одно светящееся пятно (поворотник). */
+export const blobGlow: ProceduralDraw = (g) => {
+  for (let r = 16; r > 0; r -= 2) g.fillStyle(0xffffff, 0.1 + (1 - r / 16) * 0.6).fillCircle(16, 16, r);
+  return { width: 32, height: 32 };
+};
+
 /** Свечение фонарей: два пятна по краям (белое — тонируется в красный или жёлтый). */
 export const lightsGlow: ProceduralDraw = (g) => {
   for (const cx of [20, 108]) {
