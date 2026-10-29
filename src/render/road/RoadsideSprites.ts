@@ -1,8 +1,9 @@
 // Придорожные объекты: пул картинок без аллокаций в кадре.
-// Порядок — от дальних к ближним (depth растёт), объекты за гребнем холма обрезаются снизу.
+// Порядок — по расстоянию (depth.ts, общий с трафиком), объекты за гребнем холма обрезаются снизу.
 import Phaser from 'phaser';
 import type { Road, RoadObjectKind, RoadSegment } from '../../core/road';
 import { fogAmount } from '../../core/world';
+import { depthForDistance } from './depth';
 import { shadeNoFog, type Lighting } from './lighting';
 import type { SpriteSegments } from './RoadRenderer';
 
@@ -17,9 +18,6 @@ const TEXTURE: Record<RoadObjectKind, string> = {
 /** Базовая высота вида, м (из tuning.json). */
 export type KindHeights = Record<RoadObjectKind, number>;
 
-/** Слой спрайтов: над дорогой (depth 0), под кабиной (40). */
-const DEPTH_BASE = 1;
-const DEPTH_STEP = 1e-4;
 
 export class RoadsideSprites {
   private readonly pool: Phaser.GameObjects.Image[] = [];
@@ -72,7 +70,7 @@ export class RoadsideSprites {
         img.setTint(shadeNoFog(0xffffff, lit, z, (sx - centerX) / scale));
         // Дымка: дальние объекты растворяются
         img.setAlpha(1 - fogAmount(z, lit.visibility));
-        img.setDepth(DEPTH_BASE + used * DEPTH_STEP);
+        img.setDepth(depthForDistance(z));
         img.setVisible(true);
         used++;
       }

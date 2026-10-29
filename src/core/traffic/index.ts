@@ -1,9 +1,4 @@
-// Попутный и встречный трафик, ИИ, коллизии. Реализация — M3.
-
-export interface TrafficCar {
-  /** Позиция по дороге, м. */
-  z: number;
-  /** Смещение по X: -1 левый край дороги, 1 правый. */
-  x: number;
-  speed: number;
-}
+// Попутный и встречный трафик, ИИ. Коллизии с игроком — M3.2.
+export * from './kinds';
+export * from './types';
+export * from './traffic';

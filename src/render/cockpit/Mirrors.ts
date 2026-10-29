@@ -1,10 +1,10 @@
 // Три зеркала: центральное под крышей и два боковых у стоек (GDD 6).
-// Позже (M3) в них появятся машины позади.
+// В них видны дорога и машины позади.
 import Phaser from 'phaser';
 import type { Road } from '../../core/road';
 import type { Lighting } from '../road/lighting';
 import type { RoadPalette } from '../road/RoadRenderer';
-import { MirrorView } from './MirrorView';
+import { MirrorView, type MirrorTraffic } from './MirrorView';
 
 const DEPTH = 41;
 
@@ -22,9 +22,9 @@ export class Mirrors {
   }
 
   render(road: Road, carZ: number, carX: number, cameraHeight: number, laneWidth: number, segments: number,
-    pal: RoadPalette, lit: Lighting, skyColor: number): void {
+    pal: RoadPalette, lit: Lighting, skyColor: number, traffic: MirrorTraffic): void {
     for (let i = 0; i < this.views.length; i++) {
-      (this.views[i] as MirrorView).render(road, carZ, carX, cameraHeight, laneWidth, segments, pal, lit, skyColor);
+      (this.views[i] as MirrorView).render(road, carZ, carX, cameraHeight, laneWidth, segments, pal, lit, skyColor, traffic);
     }
   }
 }

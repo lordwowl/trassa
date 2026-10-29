@@ -1,7 +1,9 @@
 // Реестр текстур: если указан файл — грузим его, иначе (или при ошибке загрузки) рисуем заглушку.
 // Замена заглушки на картинку = положить файл в public/assets и прописать file в нужной строке.
 import Phaser from 'phaser';
+import trafficData from '../../data/traffic.json';
 import { carRear, hitchhiker, pole, signSpeed, tree, treeRound, type ProceduralDraw } from './procedural';
+import { lightsGlow, vehicleTextures } from './procedural/vehicles';
 
 export interface TextureEntry {
   /** Путь относительно корня сайта, например 'assets/cars/rear_red.png'. */
@@ -16,11 +18,22 @@ export const TEXTURES = {
   pole: { procedural: pole },
   sign_speed: { procedural: signSpeed },
   hitchhiker: { procedural: hitchhiker },
+  lights_glow: { procedural: lightsGlow },
 } satisfies Record<string, TextureEntry>;
 
 export type TextureKey = keyof typeof TEXTURES;
 
-const entries = TEXTURES as Record<string, TextureEntry>;
+/**
+ * Машины трафика: veh_<вид>_<rear|front>_<цвет>, по виду на каждый цвет из PAINTS.
+ * Чтобы заменить картинкой, добавьте ключ в VEHICLE_FILES: 'veh_car_rear_0': 'assets/cars/car_rear_red.png'.
+ */
+const VEHICLE_FILES: Record<string, string> = {};
+
+const entries: Record<string, TextureEntry> = { ...(TEXTURES as Record<string, TextureEntry>) };
+for (const [key, draw] of Object.entries(vehicleTextures(trafficData.kinds.map((k) => k.id)))) {
+  const file = VEHICLE_FILES[key];
+  entries[key] = file ? { file, procedural: draw } : { procedural: draw };
+}
 
 /** Вызывать в preload(): ставит в очередь файлы, для которых они указаны. */
 export function queueTextureFiles(scene: Phaser.Scene): void {

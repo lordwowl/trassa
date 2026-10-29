@@ -104,6 +104,14 @@ export function shadeNoFog(color: number, l: Lighting, z: number, lateral = 0): 
   return (r << 16) | (g << 8) | b;
 }
 
+/** Включённые фонари у машин трафика, 0..1: в сумерках и ночью, а также в тумане и ливне. */
+export function vehicleLightsOn(l: Lighting): number {
+  const dark = (0.8 - l.ambient) / 0.35;
+  const haze = l.visibility < Infinity ? (400 - l.visibility) / 250 : 0;
+  const k = dark > haze ? dark : haze;
+  return k <= 0 ? 0 : k >= 1 ? 1 : k;
+}
+
 export function lerpColor(a: number, b: number, t: number): number {
   const k = t <= 0 ? 0 : t >= 1 ? 1 : t;
   const r = ((a >> 16) & 0xff) + ((((b >> 16) & 0xff) - ((a >> 16) & 0xff)) * k);

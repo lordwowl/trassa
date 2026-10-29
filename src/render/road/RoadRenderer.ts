@@ -73,6 +73,16 @@ export interface SpriteSegments {
   z: Float32Array;
 }
 
+/** Точка на дороге в экранных координатах (для машин трафика). */
+export interface RoadPoint {
+  x: number;
+  y: number;
+  /** Пикселей на метр. */
+  scale: number;
+  /** Экранная Y, ниже которой точка закрыта более близкой дорогой. */
+  clip: number;
+}
+
 export class RoadRenderer {
   private readonly g: Phaser.GameObjects.Graphics;
   private readonly cap: number;
@@ -91,6 +101,18 @@ export class RoadRenderer {
   private readonly zz: Float32Array;
   private readonly p: Projected = { x: 0, y: 0, scale: 0 };
   readonly sprites: SpriteSegments;
+  // Каждый сегмент кадра по индексу i от камеры: ось дороги (x и приращение), высоты концов, линия закрытия
+  private readonly segX: Float32Array;
+  private readonly segDX: Float32Array;
+  private readonly segY1: Float32Array;
+  private readonly segY2: Float32Array;
+  private readonly segTop: Float32Array;
+  private frameSegs = 0;
+  private frameOffset = 0;
+  private frameL = 1;
+  private frameCamY = 0;
+  private frameCamX = 0;
+  private frameView: ProjectionView | null = null;
 
   constructor(scene: Phaser.Scene, maxDrawDistance: number) {
     this.g = scene.add.graphics();
@@ -105,6 +127,11 @@ export class RoadRenderer {
     this.seg = new Int32Array(maxDrawDistance);
     this.lanes = new Int32Array(maxDrawDistance);
     this.zz = new Float32Array(maxDrawDistance);
+    this.segX = new Float32Array(maxDrawDistance);
+    this.segDX = new Float32Array(maxDrawDistance);
+    this.segY1 = new Float32Array(maxDrawDistance);
+    this.segY2 = new Float32Array(maxDrawDistance);
+    this.segTop = new Float32Array(maxDrawDistance);
     this.sprites = {
       count: 0,
       segment: new Int32Array(maxDrawDistance),
@@ -147,6 +174,12 @@ export class RoadRenderer {
     let count = 0;
     const sp = this.sprites;
     sp.count = 0;
+    this.frameSegs = draw;
+    this.frameOffset = offset;
+    this.frameL = L;
+    this.frameCamY = camY;
+    this.frameCamX = v.x;
+    this.frameView = v.view;
 
     for (let i = 0; i < draw; i++) {
       const idx = (base + i) % n;
@@ -158,6 +191,11 @@ export class RoadRenderer {
       let ya = s.y;
       const xb = x + dx;
       const yb = sNext.y;
+      this.segX[i] = xa;
+      this.segDX[i] = dx;
+      this.segY1[i] = ya;
+      this.segY2[i] = yb;
+      this.segTop[i] = top;
       x += dx;
       dx += s.curve * L2;
       // Объекты стоят у начала сегмента; закрыты всем, что ближе (top до этого сегмента)
@@ -257,6 +295,28 @@ export class RoadRenderer {
         }
       }
     }
+  }
+
+  /**
+   * Проекция точки дороги на расстоянии d впереди камеры и смещении lateral от оси дороги (м)
+   * по данным последнего кадра. false — точка вне дальности прорисовки или слишком близко.
+   */
+  projectOnRoad(out: RoadPoint, d: number, lateral: number): boolean {
+    const view = this.frameView;
+    if (!view || d < SPRITE_NEAR_Z) return false;
+    const u = (d + this.frameOffset) / this.frameL;
+    const i = Math.floor(u);
+    if (i >= this.frameSegs) return false;
+    const t = u - i;
+    const roadX = (this.segX[i] as number) + (this.segDX[i] as number) * t;
+    const y1 = this.segY1[i] as number;
+    const roadY = y1 + ((this.segY2[i] as number) - y1) * t;
+    project(this.p, view, roadX + lateral - this.frameCamX, roadY - this.frameCamY, d);
+    out.x = this.p.x;
+    out.y = this.p.y;
+    out.scale = this.p.scale;
+    out.clip = this.segTop[i] as number;
+    return true;
   }
 
   destroy(): void {
