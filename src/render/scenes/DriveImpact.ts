@@ -1,5 +1,5 @@
 // Последствия ударов в сцене езды: повреждения (в машину и GameState), трещины, тряска, звук,
-// лампа повреждений и надпись, когда машина встала. Удары копятся в шагах физики, показываются в кадре.
+// лампа повреждений. Удары копятся в шагах физики, показываются в кадре. Авария и эвакуатор — DriveAccident.
 import Phaser from 'phaser';
 import type { Sfx } from '../../audio/Sfx';
 import type { CarState } from '../../core/car';
@@ -8,7 +8,6 @@ import type { GameState } from '../../core/state';
 import type { CollisionResult } from '../../core/traffic';
 import { Cracks } from '../cockpit/Cracks';
 import { DASH_TOP } from '../cockpit/Cockpit';
-import { t } from '../ui/strings';
 
 /** Повреждения, с которых горит лампа, и с которых она мигает, %. */
 const LAMP_ON = 30;
@@ -21,7 +20,6 @@ const SIDE_CRACK_DAMAGE = 50;
 export class DriveImpact {
   private readonly cracks: Cracks;
   private readonly rng: RngState;
-  private readonly broken: Phaser.GameObjects.Text;
   /** Сильнейший удар с прошлого кадра. */
   private pendingImpact = 0;
   private pendingKind: CollisionResult['kind'] = 'none';
@@ -32,14 +30,6 @@ export class DriveImpact {
     this.cracks = new Cracks(scene, this.rng);
     // Машина уже побита (?damage= или сохранение): трещины по числу «пятнадцати процентов»
     for (let i = 0; i < Math.floor(initialDamage / 15); i++) this.crackAt('front', 0.5);
-    this.broken = scene.add
-      .text(640, 300, t('brokenDown'), {
-        fontFamily: 'sans-serif', fontSize: '30px', color: '#ffffff', fontStyle: 'bold',
-        backgroundColor: 'rgba(120,20,20,0.85)', padding: { x: 16, y: 10 }, align: 'center',
-      })
-      .setOrigin(0.5)
-      .setDepth(55)
-      .setVisible(false);
   }
 
   /** Из шага физики: применить повреждение и запомнить удар для эффектов. */
@@ -70,8 +60,6 @@ export class DriveImpact {
       this.pendingImpact = 0;
       this.pendingDamage = 0;
     }
-    const dead = damage >= 100;
-    if (dead !== this.broken.visible) this.broken.setVisible(dead);
     if (damage < LAMP_ON) return false;
     return damage < LAMP_BLINK || time % 800 < 400;
   }

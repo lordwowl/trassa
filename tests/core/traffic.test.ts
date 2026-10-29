@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addSection, createDraft, type Road } from '../../src/core/road';
 import {
-  createTraffic, kindWeights, parseTrafficKinds, populateTraffic, stepTraffic,
+  clearTrafficNear, createTraffic, kindWeights, parseTrafficKinds, populateTraffic, stepTraffic,
   type TrafficCar, type TrafficParams, type TrafficPlayer, type TrafficState,
 } from '../../src/core/traffic';
 import data from '../../src/data/traffic.json';
@@ -122,5 +122,14 @@ describe('трафик', () => {
     }
     expect(gap).toBeGreaterThan(1);
     expect(c.speed).toBeLessThan(0.5);
+  });
+
+  it('после аварии машины рядом убираются, дальние остаются', () => {
+    const t = createTraffic(32, 1);
+    populateTraffic(t, kinds, weights, P, road(), 0);
+    const far = active(t).filter((c) => Math.abs(c.z - 300) >= 200).length;
+    clearTrafficNear(t, 300, 200);
+    expect(active(t).every((c) => Math.abs(c.z - 300) >= 200)).toBe(true);
+    expect(active(t).length).toBe(far);
   });
 });

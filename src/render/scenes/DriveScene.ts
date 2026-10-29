@@ -25,6 +25,7 @@ import { RoadsideSprites, type KindHeights } from '../road/RoadsideSprites';
 import { TrafficSprites } from '../road/TrafficSprites';
 import type { MirrorTraffic } from '../cockpit/MirrorView';
 import { DriveHud } from '../ui/DriveHud';
+import { DriveAccident } from './DriveAccident';
 import { DriveImpact } from './DriveImpact';
 import { readTrafficParams } from './driveParams';
 import { DriveWeather } from './DriveWeather';
@@ -101,6 +102,7 @@ export class DriveScene extends Phaser.Scene {
   private readonly collision = createCollisionResult();
   private readonly collisionParams: CollisionParams = { front: 1.6, rear: 2.7, width: 1.75, damagePerImpact: 1.8, damageSide: 2, stunTime: 3 };
   private impact!: DriveImpact;
+  private accident!: DriveAccident;
   private laneWidth = 3.5;
   private readonly projection: ProjectionView = { focal: 1, centerX: GAME_WIDTH / 2, horizonY: GAME_HEIGHT / 2 };
   private readonly view: RoadView = {
@@ -141,6 +143,7 @@ export class DriveScene extends Phaser.Scene {
     populateTraffic(this.traffic, TRAFFIC_KINDS, TRAFFIC_WEIGHTS, this.trafficParams, this.road, this.car.z);
     this.mirrorTraffic = { state: this.traffic, kinds: TRAFFIC_KINDS, lightsOn: 0, blinkOn: false };
     this.impact = new DriveImpact(this, this.ctx.state.seed, this.car.damage);
+    this.accident = new DriveAccident(this, this.ctx.state, () => this.scene.restart());
     this.controls = new DriveControls(this, { gas: t('gas'), brake: t('brake') });
 
     this.cockpit = new Cockpit(this, getTuning(this.ctx.tuning, 'cockpit.speedoMax'), getTuning(this.ctx.tuning, 'car.redline'),
@@ -178,7 +181,9 @@ export class DriveScene extends Phaser.Scene {
     // Дальний свет слепит встречных только в темноте
     pl.glare = this.controls.headlights === 2 && this.mirrorTraffic.lightsOn > 0.5;
     stepTraffic(this.traffic, TRAFFIC_KINDS, TRAFFIC_WEIGHTS, this.trafficParams, this.road, pl, dt);
-    this.impact.hit(collideTraffic(this.collision, this.traffic, TRAFFIC_KINDS, this.car, this.collisionParams, dt), this.car, this.ctx.state);
+    const hit = collideTraffic(this.collision, this.traffic, TRAFFIC_KINDS, this.car, this.collisionParams, dt);
+    this.impact.hit(hit, this.car, this.ctx.state);
+    this.accident.hit(hit);
     this.weather.step(dt, this.car.speed, this.controls.wipers);
     const st = this.ctx.state;
     st.timeOfDay = advanceClock(st.timeOfDay, dt, this.timeSpeed);
@@ -199,7 +204,9 @@ export class DriveScene extends Phaser.Scene {
     sp.laneChange = getTuning(tn, 'cockpit.signalLaneChange');
     const lever = this.controls.takeSignal();
     if (lever !== 0) toggleSignal(this.signals, lever, this.car.x);
-    advance(this.loop, deltaMs / 1000, this.tick);
+    this.accident.readParams(tn);
+    // Окно аварии открыто — симуляция и часы стоят
+    if (!this.accident.paused) advance(this.loop, deltaMs / 1000, this.tick);
     const car = this.car;
     this.updateSignalsAndSound(tn);
 
@@ -258,6 +265,7 @@ export class DriveScene extends Phaser.Scene {
     ls.high = this.controls.headlights === 2;
     ls.fuel = st.fuel <= tank * getTuning(tn, 'car.fuelLampAt');
     ls.damage = this.impact.update(time, this.sfx, car.damage);
+    this.accident.update(car, this.traffic, this.laneWidth);
     this.cockpit.lamps.update(ls);
     this.cockpit.lamps.setFuel(st.fuel / tank);
     findCurveAhead(this.curveAhead, this.road, car.z, getTuning(tn, 'nav.lookahead'), getTuning(tn, 'nav.curveMin'));
