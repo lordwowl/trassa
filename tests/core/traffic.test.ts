@@ -11,7 +11,12 @@ const weights = kindWeights(kinds);
 const P: TrafficParams = {
   density: 3, oncomingDensity: 2, spawnAhead: 1200, despawnBehind: 300,
   headway: 1.2, minGap: 4, accel: 1.5, brake: 3, speedScale: 1, laneWidth: 3.5,
+  overtakeChance: 0, overtakeBoost: 1.2, signalLead: 1.2, laneChangeSpeed: 1.6, glareChance: 0,
 };
+
+function pl(z: number, x: number, speed: number): TrafficPlayer {
+  return { z, x, speed, length: 4.3, width: 1.75, glare: false, horn: false };
+}
 
 function road(): Road {
   const d = createDraft();
@@ -70,7 +75,7 @@ describe('трафик', () => {
   it('одинаковый seed — одинаковый поток', () => {
     const a = createTraffic(32, 7);
     const b = createTraffic(32, 7);
-    const pa = { z: 0, x: 1.75, speed: 25, length: 4.3 };
+    const pa = pl(0, 1.75, 25);
     const pb = { ...pa };
     populateTraffic(a, kinds, weights, P, road(), 0);
     populateTraffic(b, kinds, weights, P, road(), 0);
@@ -81,7 +86,7 @@ describe('трафик', () => {
 
   it('встречные едут навстречу и исчезают позади, поток восполняется', () => {
     const t = createTraffic(32, 3);
-    const player = { z: 0, x: 1.75, speed: 25, length: 4.3 };
+    const player = pl(0, 1.75, 25);
     populateTraffic(t, kinds, weights, P, road(), 0);
     const first = active(t).find((c) => c.dir < 0)!;
     const z0 = first.z;
@@ -95,7 +100,7 @@ describe('трафик', () => {
 
   it('машины не въезжают друг в друга', () => {
     const t = createTraffic(32, 11);
-    const player = { z: 0, x: -1.75, speed: 30, length: 4.3 }; // игрок на встречке не мешает попутным
+    const player = pl(0, -1.75, 30); // игрок на встречке не мешает попутным
     populateTraffic(t, kinds, weights, P, road(), 0);
     let worst = Infinity;
     run(t, player, 180, () => {
@@ -108,7 +113,7 @@ describe('трафик', () => {
     const t = createTraffic(4, 5);
     const c = t.cars[0]!;
     Object.assign(c, { active: true, kind: 0, dir: 1, lane: 0, z: -150, x: 1.75, speed: 25, cruise: 25, length: 4.3, width: 1.75 });
-    const player = { z: 0, x: 1.75, speed: 0, length: 4.3 };
+    const player = pl(0, 1.75, 0);
     const r = road();
     let gap = Infinity;
     for (let i = 0; i < 60 * 30; i++) {

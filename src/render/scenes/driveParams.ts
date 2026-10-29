@@ -13,6 +13,11 @@ export function readTrafficParams(p: TrafficParams, c: CollisionParams, tn: Tuni
   p.spawnAhead = getTuning(tn, 'traffic.spawnAhead');
   p.despawnBehind = getTuning(tn, 'traffic.despawnBehind');
   p.laneWidth = getTuning(tn, 'road.laneWidth');
+  p.overtakeChance = getTuning(tn, 'traffic.overtakeChance');
+  p.overtakeBoost = getTuning(tn, 'traffic.overtakeBoost');
+  p.signalLead = getTuning(tn, 'traffic.signalLead');
+  p.laneChangeSpeed = getTuning(tn, 'traffic.laneChangeSpeed');
+  p.glareChance = getTuning(tn, 'traffic.glareChance');
   c.front = getTuning(tn, 'car.frontOverhang');
   c.rear = getTuning(tn, 'car.rearOverhang');
   c.width = getTuning(tn, 'car.width');

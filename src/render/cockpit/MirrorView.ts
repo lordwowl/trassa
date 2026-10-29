@@ -29,6 +29,7 @@ const MAX_CARS = 16;
 const GLASS = 0x2a3440;
 const HEAD = 0xfff0b0;
 const TAIL = 0xff3020;
+const SIGNAL = 0xffa020;
 
 /** Машины трафика для зеркал. */
 export interface MirrorTraffic {
@@ -36,6 +37,8 @@ export interface MirrorTraffic {
   kinds: readonly TrafficKind[];
   /** Сила свечения фонарей 0..1. */
   lightsOn: number;
+  /** Фаза мигания поворотников. */
+  blinkOn: boolean;
 }
 
 export class MirrorView {
@@ -152,6 +155,12 @@ export class MirrorView {
       const color = facing ? HEAD : TAIL;
       g.fillStyle(tr.lightsOn > 0.3 ? color : shade(color, lit, d, OUTSIDE_BEAM));
       g.fillRect(x - w / 2, ly, lw, lh).fillRect(x + w / 2 - lw, ly, lw, lh);
+      // Поворотник: в зеркале сторона мира сохраняется — левый у попутной слева
+      if (c.signal !== 0 && tr.blinkOn) {
+        g.fillStyle(SIGNAL);
+        const sx = c.signal * c.dir < 0 ? x - w / 2 : x + w / 2 - lw;
+        g.fillRect(sx, ly - lh * 1.2, lw, lh);
+      }
     }
   }
 }
