@@ -1,7 +1,7 @@
 {
   "kinds": [
-    { "id": "car", "length": 4.3, "width": 1.75, "height": 1.45, "speedMin": 19, "speedMax": 27, "weight": 0.65 },
-    { "id": "truck", "length": 12, "width": 2.5, "height": 3.6, "speedMin": 15, "speedMax": 20, "weight": 0.25 },
-    { "id": "bus", "length": 11, "width": 2.5, "height": 3.2, "speedMin": 17, "speedMax": 22, "weight": 0.1 }
+    { "id": "car", "length": 4.3, "width": 1.75, "height": 1.45, "speedMin": 19, "speedMax": 27, "weight": 0.65, "mass": 1 },
+    { "id": "truck", "length": 12, "width": 2.5, "height": 3.6, "speedMin": 15, "speedMax": 20, "weight": 0.25, "mass": 6 },
+    { "id": "bus", "length": 11, "width": 2.5, "height": 3.2, "speedMin": 17, "speedMax": 22, "weight": 0.1, "mass": 5 }
   ]
 }

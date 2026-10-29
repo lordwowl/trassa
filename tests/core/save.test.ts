@@ -14,7 +14,8 @@ function memoryStorage(): KeyValueStorage {
 describe('save', () => {
   it('createGameState применяет стартовые условия', () => {
     const s = createGameState({ seed: 5, money: 10.4, fuel: 3, weather: 'rain', timeOfDay: 22, carId: 'x' });
-    expect(s).toMatchObject({ seed: 5, money: 10, fuel: 3, weather: 'rain', timeOfDay: 22, carId: 'x', version: 1 });
+    expect(s).toMatchObject({ seed: 5, money: 10, fuel: 3, weather: 'rain', timeOfDay: 22, carId: 'x', version: 2, damage: 0 });
+    expect(createGameState({ seed: 1, damage: 140 }).damage).toBe(100);
   });
 
   it('сохранение и загрузка дают тот же объект', () => {
@@ -28,6 +29,11 @@ describe('save', () => {
     expect(deserialize('{nope')).toBeNull();
     expect(deserialize('{"version":1}')).toBeNull();
     expect(deserialize(serialize({ ...createGameState({ seed: 1 }), version: 999 }))).toBeNull();
+  });
+
+  it('сохранение v1 мигрирует: повреждения 0', () => {
+    const { damage: _, ...v1 } = { ...createGameState({ seed: 3 }), version: 1 };
+    expect(deserialize(JSON.stringify(v1))).toMatchObject({ version: 2, damage: 0, seed: 3 });
   });
 
   it('сбой хранилища перехватывается', () => {

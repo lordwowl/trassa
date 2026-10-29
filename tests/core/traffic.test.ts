@@ -50,7 +50,7 @@ describe('traffic.json', () => {
   it('разбирается и проверяется', () => {
     expect(kinds.map((k) => k.id)).toEqual(['car', 'truck', 'bus']);
     expect(() => parseTrafficKinds({ kinds: [] })).toThrow(/kinds/);
-    expect(() => parseTrafficKinds({ kinds: [{ id: 'x', length: 1, width: 1, height: 1, speedMin: 5, speedMax: 2, weight: 1 }] })).toThrow(/speedMin/);
+    expect(() => parseTrafficKinds({ kinds: [{ id: 'x', length: 1, width: 1, height: 1, speedMin: 5, speedMax: 2, weight: 1, mass: 1 }] })).toThrow(/speedMin/);
   });
 });
 

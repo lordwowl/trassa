@@ -140,3 +140,31 @@ describe('readRoadContext', () => {
     expect(Math.abs(ctx.grade)).toBeLessThanOrEqual(0.1 + 1e-9);
   });
 });
+
+describe('повреждения', () => {
+  function damaged(damage: number) {
+    const car = createCarState();
+    car.damage = damage;
+    return car;
+  }
+
+  it('до 30% машина едет прямо, выше — уводит вправо', () => {
+    expect(run(5, GAS, flat, damaged(25)).x).toBeCloseTo(0);
+    expect(run(5, GAS, flat, damaged(80)).x).toBeGreaterThan(0.2);
+  });
+
+  it('выше 60% падает макс. скорость', () => {
+    // Широкая дорога: увод не выводит на обочину
+    const wide = { ...flat, halfWidth: 1000 };
+    const healthy = run(120, GAS, wide).speed;
+    const broken = damaged(99);
+    broken.speed = healthy;
+    run(30, GAS, wide, broken);
+    expect(broken.speed).toBeLessThan(healthy * 0.75);
+    expect(run(120, GAS, wide, damaged(55)).speed).toBeCloseTo(healthy, 0);
+  });
+
+  it('при 100% машина не разгоняется', () => {
+    expect(run(5, GAS, flat, damaged(100)).speed).toBe(0);
+  });
+});

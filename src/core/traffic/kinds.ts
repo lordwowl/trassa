@@ -1,4 +1,4 @@
-// Виды машин трафика из data/traffic.json (размеры, м; скорости, м/с; доля в потоке).
+// Виды машин трафика из data/traffic.json (размеры, м; скорости, м/с; доля в потоке; масса относительно игрока).
 
 export interface TrafficKind {
   id: string;
@@ -8,6 +8,8 @@ export interface TrafficKind {
   speedMin: number;
   speedMax: number;
   weight: number;
+  /** Масса относительно машины игрока (для удара). */
+  mass: number;
 }
 
 function num(o: Record<string, unknown>, f: string, where: string): number {
@@ -35,7 +37,9 @@ export function parseTrafficKinds(raw: unknown): TrafficKind[] {
       speedMin: num(o, 'speedMin', where),
       speedMax: num(o, 'speedMax', where),
       weight: num(o, 'weight', where),
+      mass: num(o, 'mass', where),
     };
+    if (kind.mass <= 0) throw new Error(`traffic.json: ${where}.mass — должна быть > 0`);
     if (kind.speedMin > kind.speedMax) throw new Error(`traffic.json: ${where} — speedMin > speedMax`);
     return kind;
   });
