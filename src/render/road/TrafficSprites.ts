@@ -14,7 +14,10 @@ const LIGHT_HEIGHT: Record<string, readonly [number, number]> = {
   car: [0.42, 0.4],
   truck: [0.12, 0.17],
   bus: [0.2, 0.22],
+  moto: [0.4, 0.4],
 };
+/** Виды с одним фонарём (мотоцикл): свечение одним пятном. */
+const SINGLE_LIGHT = new Set(['moto']);
 const TAIL_TINT = 0xff3020;
 const HEAD_TINT = 0xfff0b0;
 const SIGNAL_TINT = 0xffa020;
@@ -30,17 +33,21 @@ export class TrafficSprites {
   /** Ключи текстур [вид][0 — сзади, 1 — спереди][цвет] — без сборки строк в кадре. */
   private readonly keys: string[][][];
   private readonly lightY: number[][];
+  private readonly singleLight: boolean[];
+  private readonly glowKey: string[] = [];
   private readonly pt: RoadPoint = { x: 0, y: 0, scale: 0, clip: 0 };
 
   constructor(scene: Phaser.Scene, size: number, kinds: readonly TrafficKind[]) {
     this.keys = kinds.map((k) => [0, 1].map((v) => PAINTS.map((_, p) => vehicleKey(k.id, v === 0 ? 'rear' : 'front', p))));
     this.lightY = kinds.map((k) => [...(LIGHT_HEIGHT[k.id] ?? LIGHT_HEIGHT.car!)]);
+    this.singleLight = kinds.map((k) => SINGLE_LIGHT.has(k.id));
     const first = this.keys[0]![0]![0]!;
     for (let i = 0; i < size; i++) {
       this.bodies.push(scene.add.image(0, 0, first).setOrigin(0.5, 1).setVisible(false));
       this.glows.push(scene.add.image(0, 0, 'lights_glow').setBlendMode(Phaser.BlendModes.ADD).setVisible(false));
       this.signals.push(scene.add.image(0, 0, 'blob_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(SIGNAL_TINT).setVisible(false));
       this.shownKey.push(first);
+      this.glowKey.push('lights_glow');
     }
   }
 
@@ -91,8 +98,15 @@ export class TrafficSprites {
       const on = flash ? 1 : lightsOn;
       if (on > 0.02 && ly < pt.clip) {
         const k = flash ? 1.6 : 1;
+        const single = this.singleLight[c.kind] as boolean;
+        const gk = single ? 'blob_glow' : 'lights_glow';
+        if (this.glowKey[used] !== gk) {
+          glow.setTexture(gk);
+          this.glowKey[used] = gk;
+        }
         glow.setTint(view === 0 ? TAIL_TINT : HEAD_TINT);
-        glow.setDisplaySize(w * 1.15 * k, Math.max(3, h * (view === 0 ? 0.22 : 0.3) * k));
+        const gh = Math.max(3, h * (view === 0 ? 0.22 : 0.3) * k);
+        glow.setDisplaySize(single ? gh : w * 1.15 * k, gh);
         glow.setPosition(pt.x, ly + yOffset);
         glow.setAlpha(on * (1 - fog * 0.6) * (view === 0 ? 0.9 : 1));
         glow.setDepth(depth + 1e-6);

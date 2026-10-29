@@ -1,6 +1,6 @@
 // Столкновение машины игрока с трафиком: удар вдоль дороги (догнал, догнали, лобовое)
 // или касание боком. Скорости после удара — неупругий удар с учётом масс;
-// повреждение пропорционально разнице скоростей (GDD 5.4). Без аллокаций: результат пишется в out.
+// повреждение пропорционально разнице скоростей (GDD 5.4) и зависит от массы второй машины. Без аллокаций: результат пишется в out.
 
 import type { CarState } from '../car';
 import type { TrafficKind } from './kinds';
@@ -85,7 +85,7 @@ export function collideTraffic(out: CollisionResult, t: TrafficState, kinds: rea
       car.speed *= SIDE_SPEED_KEEP;
       out.kind = 'side';
       out.impact = Math.abs(vP - vC);
-      out.damage = p.damageSide;
+      out.damage = p.damageSide * massFactor((kinds[c.kind] as TrafficKind).mass);
       return applyCooldown(out);
     }
     const ahead = c.z > pMid;
@@ -106,10 +106,18 @@ export function collideTraffic(out: CollisionResult, t: TrafficState, kinds: rea
     car.z = ahead ? cMin - p.front - SEPARATION : cMax + p.rear + SEPARATION;
     out.kind = c.dir < 0 ? 'headon' : ahead ? 'front' : 'rear';
     out.impact = closing > 0 ? closing : 0;
-    out.damage = out.impact >= MIN_IMPACT ? out.impact * p.damagePerImpact : 0;
+    out.damage = out.impact >= MIN_IMPACT ? out.impact * p.damagePerImpact * massFactor(mC) : 0;
     return applyCooldown(out);
   }
   return out;
+}
+
+/**
+ * Во что врезались: легковая — как есть, мотоцикл — заметно меньше, грузовик и автобус — больше
+ * (доля энергии удара, которую принимает машина игрока: 2m/(1+m)).
+ */
+function massFactor(m: number): number {
+  return (2 * m) / (1 + m);
 }
 
 function applyCooldown(out: CollisionResult): CollisionResult {

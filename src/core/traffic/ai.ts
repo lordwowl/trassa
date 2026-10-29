@@ -17,6 +17,8 @@ const BLOCK_GAP = 45;
 const BLOCK_SPEED = 2;
 /** Вернуться в свою полосу с таким запасом перед обогнанным, м. */
 const RETURN_GAP = 6;
+/** Запас по времени при возврате на каждый 1 м/с разницы скоростей, с. */
+const RETURN_TIME = 2;
 /** Обгон дольше этого не начинать, с. */
 const MAX_PASS_TIME = 12;
 /** Запас до встречных при решении об обгоне, м. */
@@ -221,13 +223,13 @@ export function updateAi(t: TrafficState, i: number, l: Leader, p: TrafficParams
         break;
       }
       if (passed(t, c, player)) {
-        // Впереди в своей полосе ещё машина вплотную — обгоняем и её, иначе возвращаемся
+        // Впереди в своей полосе ещё машина близко — обгоняем и её; сзади быстро догоняют — ждём; иначе возвращаемся
         const next = homeBlocker(t, i, player, home, lw * 0.8);
         if (next === -1) {
           c.phase = OVERTAKE_RETURN;
           c.phaseTime = 0;
           c.signal = 1;
-        } else c.target = next;
+        } else if (isAhead(t, c, next, player)) c.target = next;
       }
       break;
     }
@@ -280,22 +282,34 @@ function passed(t: TrafficState, c: TrafficCar, player: TrafficPlayer): boolean 
   return (c.z - tz) * c.dir > (tl + c.length) / 2 + RETURN_GAP;
 }
 
-/** Кто в своей полосе мешает вернуться: машина рядом или чуть впереди (индекс), игрок или −1. */
+/**
+ * Кто в своей полосе мешает вернуться: машина впереди ближе безопасного (с поправкой на то, что мы быстрее)
+ * или позади ближе безопасного (с поправкой на то, что она быстрее). Индекс, PLAYER_TARGET или −1.
+ */
 function homeBlocker(t: TrafficState, i: number, player: TrafficPlayer, home: number, laneW: number): number {
   const c = t.cars[i] as TrafficCar;
-  const from = -(c.length / 2 + RETURN_GAP);
-  const to = c.length / 2 + RETURN_GAP + 6;
   for (let j = 0; j < t.cars.length; j++) {
     const o = t.cars[j] as TrafficCar;
     if (j === i || !o.active || o.dir !== c.dir || !overlaps(o.x, o.width, home, laneW)) continue;
-    const ahead = (o.z - c.z) * c.dir - o.length / 2;
-    if (ahead + o.length > from && ahead < to) return j;
+    if (tooClose(c, (o.z - c.z) * c.dir, o.length, o.speed)) return j;
   }
-  if (c.dir > 0 && overlaps(player.x, player.width, home, laneW)) {
-    const ahead = player.z - c.z - player.length / 2;
-    if (ahead + player.length > from && ahead < to) return PLAYER_TARGET;
+  if (c.dir > 0 && overlaps(player.x, player.width, home, laneW) && tooClose(c, player.z - c.z, player.length, player.speed)) {
+    return PLAYER_TARGET;
   }
   return -1;
+}
+
+/** rel — расстояние между центрами по ходу машины c (> 0 — другая впереди). */
+function tooClose(c: TrafficCar, rel: number, length: number, speed: number): boolean {
+  const gap = Math.abs(rel) - (length + c.length) / 2;
+  const closing = rel >= 0 ? c.speed - speed : speed - c.speed;
+  return gap < RETURN_GAP + (closing > 0 ? closing * RETURN_TIME : 0);
+}
+
+/** Впереди ли машина/игрок с индексом k относительно c. */
+function isAhead(t: TrafficState, c: TrafficCar, k: number, player: TrafficPlayer): boolean {
+  const z = k === PLAYER_TARGET ? player.z : (t.cars[k] as TrafficCar).z;
+  return (z - c.z) * c.dir > 0;
 }
 
 /** Плавное боковое смещение к targetX (уход от игрока — быстрее). */

@@ -276,6 +276,11 @@ export class DriveScene extends Phaser.Scene {
     d.x = car.x;
     d.rpm = car.rpm;
     d.gear = car.gear;
+    let same = 0;
+    let oncoming = 0;
+    for (const c of this.traffic.cars) if (c.active) c.dir > 0 ? same++ : oncoming++;
+    d.trafficSame = same;
+    d.trafficOncoming = oncoming;
   }
 
   /** Мигание ламп поворотников, щелчки реле, гудок. */
