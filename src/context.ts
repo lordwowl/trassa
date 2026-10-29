@@ -11,6 +11,9 @@ export interface DebugInfo {
   gear: number;
   segment: number;
   x: number;
+  /** Машин трафика: попутных и встречных. */
+  trafficSame: number;
+  trafficOncoming: number;
 }
 
 export interface GameContext {

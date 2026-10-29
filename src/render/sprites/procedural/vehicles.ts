@@ -98,10 +98,34 @@ const busFront: VehicleDraw = (g, p) => {
   return { width: 160, height: 205 };
 };
 
+// Мотоцикл с мотоциклистом 0.8 × 1.45 м → 52 × 93: цвет — куртка и бак
+const motoRear: VehicleDraw = (g, p) => {
+  g.fillStyle(DARK).fillRoundedRect(20, 62, 12, 31, 4);
+  g.fillStyle(0x3a3d44).fillRect(10, 54, 32, 12);
+  g.fillStyle(TAIL).fillRect(20, 50, 12, 6);
+  g.fillStyle(p).fillRoundedRect(10, 22, 32, 34, 8);
+  g.fillStyle(0x2c3e50).fillRect(12, 50, 10, 14).fillRect(30, 50, 10, 14);
+  g.fillStyle(0x222428).fillCircle(26, 12, 11);
+  g.fillStyle(DARK).fillRect(2, 34, 8, 4).fillRect(42, 34, 8, 4);
+  return { width: 52, height: 93 };
+};
+
+const motoFront: VehicleDraw = (g, p) => {
+  g.fillStyle(DARK).fillRoundedRect(20, 64, 12, 29, 4);
+  g.fillStyle(darker(p, 0.75)).fillRoundedRect(14, 46, 24, 20, 6);
+  g.fillStyle(HEAD).fillCircle(26, 56, 6);
+  g.fillStyle(p).fillRoundedRect(10, 20, 32, 28, 8);
+  g.fillStyle(DARK).fillRect(0, 40, 52, 4);
+  g.fillStyle(0x222428).fillCircle(26, 11, 11);
+  g.fillStyle(GLASS).fillRect(19, 8, 14, 6);
+  return { width: 52, height: 93 };
+};
+
 const DRAWS: Record<string, Record<VehicleView, VehicleDraw>> = {
   car: { rear: carRear, front: carFront },
   truck: { rear: truckRear, front: truckFront },
   bus: { rear: busRear, front: busFront },
+  moto: { rear: motoRear, front: motoFront },
 };
 
 /** Ключ текстуры машины трафика. */

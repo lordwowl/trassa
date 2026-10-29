@@ -38,7 +38,7 @@ export class DebugScene extends Phaser.Scene {
     const lines = [
       `FPS ${this.game.loop.actualFps.toFixed(0)}  scene ${d.scene}  seed ${s.seed}`,
       `v ${(d.speed * 3.6).toFixed(0)} км/ч  rpm ${d.rpm.toFixed(0)}  gear ${d.gear}`,
-      `seg ${d.segment}  x ${d.x.toFixed(2)}`,
+      `seg ${d.segment}  x ${d.x.toFixed(2)}  traffic ${d.trafficSame}↑ ${d.trafficOncoming}↓`,
       `weather ${s.weather}  time ${fmtTime(s.timeOfDay)}`,
       `car ${s.carId}  money ${s.money}  fuel ${s.fuel.toFixed(1)} л  damage ${s.damage.toFixed(0)}%`,
     ];

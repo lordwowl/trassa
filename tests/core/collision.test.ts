@@ -86,4 +86,18 @@ describe('столкновения с трафиком', () => {
     }
     expect(total).toBe(3);
   });
+
+  it('повреждение зависит от того, во что врезались: мотоцикл < легковая < грузовик', () => {
+    const hit = (kind: number, length: number, width: number) => {
+      const { t, car, out } = scene({ z: length / 2 + 1.3, speed: 5, kind, length, width }, { z: 0, x: 1.75, speed: 15 });
+      return collideTraffic(out, t, kinds, car, P, DT).damage;
+    };
+    const moto = hit(3, 2.1, 0.8);
+    const car = hit(0, 4.3, 1.75);
+    const truck = hit(1, 12, 2.5);
+    expect(car).toBeCloseTo(20);
+    expect(moto).toBeLessThan(car * 0.6);
+    expect(truck).toBeGreaterThan(car * 1.5);
+  });
 });
+

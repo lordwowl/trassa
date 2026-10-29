@@ -30,7 +30,7 @@ setContext({
     timeOfDay: config.time,
     weather: config.weather,
   }),
-  debug: { scene: 'boot', speed: 0, rpm: 0, gear: 1, segment: 0, x: 0 },
+  debug: { scene: 'boot', speed: 0, rpm: 0, gear: 1, segment: 0, x: 0, trafficSame: 0, trafficOncoming: 0 },
 });
 
 const game = new Phaser.Game({
